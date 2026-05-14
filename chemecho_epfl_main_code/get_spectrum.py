@@ -2,7 +2,6 @@ import nistchempy as nist
 from jcamp import jcamp_readfile
 import tempfile
 import os
-from ir_spectra_conversion import normalize_to_transmittance
 import matplotlib.pyplot as plt
 import pandas as pd
 from io import StringIO
@@ -64,7 +63,7 @@ def extract_spectrum_data(cas:str, index_spectrum: int = 0):
         return data_x, data_y
 
 
-def ir_graph(data : tuple, cas) :
+def ir_graph(data : tuple, cas :str) :
     """Plot IR spectra in .svg format
 
     Args:
