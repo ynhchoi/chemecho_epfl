@@ -70,7 +70,7 @@ def ir_graph(data : tuple, cas) :
         data (tuple): the two lists of values (wavenumbers and transmittance)
         cas (str): CAS number of the compound of interest
     Returns:
-
+        .svg: IR spectra
     """
     df_spectrum = pd.DataFrame({"Wavenumber":data[0], "Transmittance":data[1]})
     compound = nist.get_compound(cas)
@@ -84,7 +84,7 @@ def ir_graph(data : tuple, cas) :
     ax.grid(visible=False)
     ax.set_xlim(max(data[0]), min(data[0]))
     ax.set_ylim(0, 100)
-    print(type(fig))
+
     return fig.savefig("test.svg")
 
 
