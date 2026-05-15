@@ -3,7 +3,7 @@ import nistchempy as nist
 import tempfile
 import os
 
-from get_spectrum import extract_spectrum_data
+from chemecho_epfl.src.chemecho.get_spectrum import extract_spectrum_data
 from ir_visualisation import ir_graph
 from ir_spectra_conversion import spectrum_to_dataframe, from_df_to_csv
 from musification import spectrum_to_midi

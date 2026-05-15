@@ -17,8 +17,15 @@ def extract_spectrum_data(cas:str, index_spectrum: int = 0):
     Return:
         tuple (list, list): two lists of values, the wavenumbers in 1/cm and the transmittance in %
     """
-    
+
+    if not isinstance(cas, str):
+        raise TypeError (f"Invalid type {type(cas)}: CAS number must be a string")
+
     X = nist.get_compound(cas)
+    
+    if X is None:
+        raise ValueError (f"Could not find a compound in the database for the specified CAS number {cas}")
+  
     X.get_ir_spectra()
     X.ir_specs
 
@@ -50,7 +57,7 @@ def extract_spectrum_data(cas:str, index_spectrum: int = 0):
             for i in range(0, len(data_y)):
                 data_y[i] = (data_y[i]/max_transmittance)*100
         else :    
-            extract_spectrum_data(cas,index_spectrum+1)
+            return extract_spectrum_data(cas,index_spectrum+1)
 
         if data.get('xunits') == "MICROMETERS" or data.get('xunits') == "Micrometers":
             for i in range(0, len(data_x)):
@@ -58,7 +65,7 @@ def extract_spectrum_data(cas:str, index_spectrum: int = 0):
         elif data.get('xunits') == "1/CM" or data.get('xunits') == "1/cm" or data.get('xunits') == "cm-1" or data.get('xunits') == "cm -1" :
             pass
         else :
-            extract_spectrum_data(cas,index_spectrum+1)
+            return extract_spectrum_data(cas,index_spectrum+1)
 
         return data_x, data_y
 
@@ -92,4 +99,7 @@ def from_df_to_csv(df_spectrum) :
     buffer_csv = StringIO()
     return df_spectrum.to_csv(buffer_csv, index=False)
 
-ir_graph(extract_spectrum_data('74-85-1'),'74-85-1')
+#ir_graph(extract_spectrum_data('50-78-2'),'50-78-2')
+if __name__ == "__main__":
+    result_graph = ir_graph(extract_spectrum_data('50-78-2'),'50-78-2')
+    print(f"IR spectrum plotted for 50-78-2")
