@@ -7,12 +7,20 @@ name = "chemecho"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {file = "LICENSE"}
-description = "None"
+description = "A Python package that converts molecular IR spectra into MIDI music"
 dependencies = [
-    # "rdkit",
+    "nistchempy>=1.0.5",
+    "jcamp>=1.2.2",
+    "midiutil>=1.2.1",
+    "scipy>=1.15.3",
+    "rdkit>=2025.9.6",
+    "streamlit>=1.57.0",
+    "requests>=2.33.1",
+    "matplotlib>=3.10.8",
+    "pandas>=2.3.3",
 ]
 authors = [
-    {name = "None", email = "None"}
+    {name = "ynhchoi", email = "handyhc48@gmail.com"}
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -21,10 +29,9 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 dynamic = ["version"]
 
@@ -54,6 +61,7 @@ path = "src/chemecho/__init__.py"
 testpaths = [
     "tests",
 ]
+python_files = ["test_*.py", "tests_*.py"]
 
 [tool.coverage.run]
 omit = [

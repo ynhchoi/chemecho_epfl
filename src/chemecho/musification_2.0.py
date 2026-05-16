@@ -1,155 +1,204 @@
-import chemecho_epfl.src.chemecho.get_spectrum as spect
-import numpy as np
-import musicpy as mp
-from musicpy.daw import *
-from io import StringIO
-import os
+import nistchempy as nist
+from midiutil import MIDIFile
+import math
+from scipy.signal import find_peaks
+from get_spectrum import extract_spectrum_data
 
 
-def molecular_weight_to_sound_code(compound_cas : str) -> int :
+def mw_to_bpm(mol_weight: float) -> int:
+    """Molecular weight (Da) → tempo (BPM).
 
+    Based on kinetic theory: RMS molecular velocity scales as 1/√M,
+    so lighter molecules get a faster tempo.
+    Range: 18 Da (water) → 170 BPM, 600 Da (large drug) → 60 BPM.
+
+    Args:
+        mol_weight: molecular weight in Da
+    Returns:
+        tempo in beats per minute (60–170)
     """
-    Associates an instrument to the molecular weight (heavier molecule corresponds to lower instrument)
-    
-    Arg:
-        (str) : CAS number of compound
+    ratio = (math.sqrt(mol_weight) - math.sqrt(18)) / (math.sqrt(600) - math.sqrt(18))
+    return int(max(60, min(170, round(170 - ratio * 110))))
 
-    Return 
-        (int) : int corresponding to an instrument in General MIDI Instruments
-    """
-    if not isinstance(compound_cas, str):
-        raise TypeError (f"Invalid type {type(compound_cas)}: CAS number must be a string")
-    
-    compound = spect.nist.get_compound(compound_cas)
-    if compound is None:
-        raise ValueError (f"Could not find a compound in the database for the specified CAS number {compound_cas}")
 
-    molecular_weight_compound = compound.mol_weight
-    if molecular_weight_compound < 50 :
-        return 102 #return  "goblin" sound (light sound)
-    elif molecular_weight_compound >= 50 and molecular_weight_compound < 100 :
-        return 89 #return "Fantasia" sound (a little bit heavier)
-    elif molecular_weight_compound >= 100 and molecular_weight_compound < 200 :
-        return 92 #return "space voice" sound (intermediately light)
-    elif molecular_weight_compound >= 200 and molecular_weight_compound < 300 :
-        return 95 #return "Halo pad" sound (heavier)
-    else :
-        return 99 #return "Crystal" sound (heavy)
+def molecular_weight_to_sound_code(compound) -> int:
+    """Associates an instrument to the molecular weight.
 
-def peak_detection (wavenumbers, transmittances) -> list :
-    
+    Heavier molecule corresponds to a lower-pitched instrument,
+    following the analogy that heavier objects vibrate more slowly.
+
+    Args:
+        compound: NistCompound object (already fetched, avoids redundant NIST call)
+    Returns:
+        General MIDI program number (0-indexed)
     """
-    Removes the tiny noise so the final music is a little more pleasing
-    
-    arg (str): CAS number of compound
-    return (list): list corresponding to spectrum without noise
-    
+    mw = compound.mol_weight
+    if mw < 50:
+        return 40   # violin
+    elif mw < 100:
+        return 71   # clarinet
+    elif mw < 200:
+        return 42   # cello
+    elif mw < 300:
+        return 66   # tenor sax
+    else:
+        return 43   # contrabass
+
+
+def peak_detection(wavenumbers, transmittances,
+                   min_prominence: float = 15.0, min_width_pts: int = 3):
+    """Detect IR absorption peaks as local minima in transmittance.
+
+    Uses scipy find_peaks on the inverted transmittance curve to locate
+    absorption dips. Returns wavenumber, prominence (absorption depth),
+    and FWHM half-width for each peak.
+
+    Args:
+        wavenumbers: list of wavenumbers in cm⁻¹
+        transmittances: list of transmittance values in %
+        min_prominence: minimum absorption depth (%) to qualify as a peak.
+                        Filters out baseline noise.
+        min_width_pts: minimum peak width in data points.
+                        Filters out single-sample noise spikes.
+    Returns:
+        list of (wavenumber, prominence, width_wn) tuples,
+        sorted by wavenumber descending (high to low)
     """
-    
-    peaks =[]
-    threshold = max(transmittances)-0.1*(max(transmittances)-min(transmittances))
-    for i in range(1, len(transmittances) - 1):
-        if transmittances[i] < threshold:
-            peaks.append((wavenumbers[i], transmittances[i]))
-        else:
-            peaks.append((wavenumbers[i], max(transmittances)))
+    neg_t = [-v for v in transmittances]
+    indices, props = find_peaks(neg_t, prominence=min_prominence, width=min_width_pts)
+
+    # Convert width from data points to wavenumber units
+    avg_spacing = abs(wavenumbers[-1] - wavenumbers[0]) / max(len(wavenumbers) - 1, 1)
+
+    peaks = []
+    for idx, prom, width_pts in zip(indices, props['prominences'], props['widths']):
+        width_wn = float(width_pts) * avg_spacing
+        peaks.append((wavenumbers[idx], float(prom), float(width_wn)))
+
+    peaks.sort(key=lambda p: p[0], reverse=True)
     return peaks
 
 
+def wavenumber_to_midi(wavenumber: float) -> int:
+    """Map wavenumber (cm⁻¹) to MIDI pitch using linear scaling.
 
-def molecular_music (cas, bpm_mol=120):
+    Higher wavenumber = faster molecular vibration = higher pitch.
+    Range: 400 cm⁻¹ → MIDI 40 (E2), 4000 cm⁻¹ → MIDI 84 (C6).
 
+    Args:
+        wavenumber: IR wavenumber in cm⁻¹
+    Returns:
+        MIDI pitch number (40–84)
     """
-    Translates IR spectrum to music.
+    ratio = (wavenumber - 400) / (4000 - 400)
+    return int(round(max(40, min(84, 40 + ratio * 44))))
 
-    The audio-spectrum frequency varies with a signal: if low transmittance:high frequency
-    Saves to a MIDI file, that can be incorporated in Streamlit app (or played with VLC media player).
 
-    Args (str), (int) : CAS number of compound, bpm of music it default is 120 bpm
-    Return (str) : Filename of music generated, to be included in Streamlit
+def molecular_music(compound_or_cas, output_path: str, data=None,
+                    min_prominence: float = 15.0, min_width_pts: int = 3,
+                    drum_track: bool = True):
+    """Translate an IR spectrum into a MIDI file.
+
+    Each detected absorption peak becomes one note, with four independent
+    dimensions of spectral information encoded:
+
+        wavenumber gap → note interval  (peaks close in wn play rapidly;
+                                         peaks far apart have a longer pause)
+        wavenumber     → pitch          (linear: 400 cm⁻¹ = E2, 4000 cm⁻¹ = C6)
+        prominence     → velocity       (stronger absorption = louder note)
+        FWHM width     → duration       (broader peak = longer, sustained note)
+
+    Total melody duration is normalised to 30 beats so all molecules produce
+    a similarly-lengthed piece while preserving relative spectral spacing.
+
+    An optional drum track marks every 100 cm⁻¹ (hi-hat) and every
+    500 cm⁻¹ (kick drum) as a spectral ruler across the full duration.
+
+    Tempo and instrument are derived from molecular weight via kinetic theory.
+
+    Args:
+        compound_or_cas: CAS string or already-fetched NistCompound object
+        output_path: file path to write the .mid file
+        data: optional pre-fetched (wavenumbers, transmittances) tuple.
+              Pass this to avoid fetching from NIST a second time.
+        min_prominence: minimum absorption depth (%) to count as a peak
+        min_width_pts: minimum peak width in data points
+        drum_track: if True, add a percussion track as a wavenumber ruler
+
+    Example:
+        >>> molecular_music('67-64-1', 'acetone.mid')
     """
-    extracted_data = spect.extract_spectrum_data(cas)
-    wavenumbers = extracted_data[0]
-    transmittances = extracted_data[1]
-    peaks = peak_detection(wavenumbers, transmittances)
-    print (len(peaks))
-    compound = spect.nist.get_compound(cas).name
-    instru = molecular_weight_to_sound_code(cas)
+    if isinstance(compound_or_cas, str):
+        compound = nist.get_compound(compound_or_cas)
+    else:
+        compound = compound_or_cas
 
-    notes=[]
-    target_duration_beats = 30
-    interval_value = target_duration_beats / len(peaks)
-    intervals = [interval_value] * len(peaks)
+    if data is not None:
+        wavenumbers, transmittances = data
+    else:
+        wavenumbers, transmittances = extract_spectrum_data(compound)
 
-    for wave, trans in peaks:
-        freq = 196 + (100 - trans) / 100 * (1046.50 - 196)
-        note_generated = mp.freq_to_note(freq)
-        note_name = note_generated.name
-        octave = note_generated.num
-        volume = 80  # constant volume
-        note_duration = interval_value * 10 #duration longer than space btw notes that way they 
-        #"mix" and the sound becomes continuous
-        if freq < 200:
-            note = mp.note(note_name,octave, note_duration, volume=20)
-        else:
-            note = mp.note(note_name,octave, note_duration, volume)
-        #this is here so the "noise" is not as annoying
-        note_with_effect = set_effect(note, fade(5,5))
-        notes.append(note_with_effect)
+    peaks = peak_detection(wavenumbers, transmittances, min_prominence, min_width_pts)
+    if not peaks:
+        raise ValueError(
+            f"No peaks detected for {compound.name} with current thresholds. "
+            "Try lowering min_prominence."
+        )
 
-  
-    notes_track = mp.chord(notes=notes, interval=intervals)
+    bpm        = mw_to_bpm(compound.mol_weight)
+    instrument = molecular_weight_to_sound_code(compound)
 
-    min_wave = min(wavenumbers)
-    max_wave = max(wavenumbers)
-    
-    start_small = int(np.ceil(min_wave / 100)) * 100
-    end_small = int(np.floor(max_wave / 100)) * 100
-    
-    print(f"interval_value: {interval_value}")
-    print(f"note_duration: {note_duration}")
-    print(f"durée théorique en beats: {interval_value * len(peaks)}")
-    print(f"durée note en ms: {note_duration * (60000/bpm_mol)}")
+    target_beats = 30.0
 
-    #final music composition !!!
-    all_tracks = [notes_track]
-    instruments = [instru]
-    channels = [0]
-    
-    all_marks = list(range(start_small, end_small + 1, 100))
-    drum_string_parts = []
-    if len(all_marks) > 0: # here we check that the scale is not empty which might happen
-        #(although unlikely) if a spectrum is very narrow
-        for mark in all_marks:
-            if mark % 500 == 0:
-                drum_string_parts.append('K') # kick drum for every 500 cm-1
-            else:
-                drum_string_parts.append('S') # snare drum for every 100 cm-1
-                # that way we don't have any 
-                #overlap of the 500 cm-1 mark and the 100 cm-1 mark
-    interval_drum = 30 / len(all_marks)
-    drum_string = ', '.join(drum_string_parts)
-    drum_track = mp.drum(drum_string, default_interval=interval_drum)
+    # Note intervals: proportional to wavenumber gaps between consecutive peaks.
+    # Peaks close in wavenumber space → short interval (rapid succession).
+    # Peaks far apart → longer interval (silence between them).
+    # Intervals are normalised so their sum equals target_beats.
+    wns = [p[0] for p in peaks]
+    if len(peaks) > 1:
+        gaps = [wns[i] - wns[i + 1] for i in range(len(wns) - 1)]
+        min_gap, max_gap = min(gaps), max(gaps)
+        gap_range = max(max_gap - min_gap, 1.0)
+        raw_intervals = [0.5 + (g - min_gap) / gap_range * 3.5 for g in gaps]
+        raw_intervals.append(raw_intervals[-1])  # last note reuses previous interval
+        scale = target_beats / sum(raw_intervals)
+        intervals = [iv * scale for iv in raw_intervals]
+    else:
+        intervals = [target_beats]
 
-    if drum_track is not None:
-        all_tracks.append(drum_track.notes)
-        instruments.append(1)
-        channels.append(9)
+    # Note duration: proportional to FWHM peak width (0.5–2.0 beats).
+    # Narrower peaks → short note; broader peaks → sustained note.
+    # Independent of interval so spacing and sustain encode separate information.
+    all_widths  = [w for _, _, w in peaks]
+    min_w, max_w = min(all_widths), max(all_widths)
+    width_range  = max(max_w - min_w, 1.0)
 
+    n_tracks = 2 if drum_track else 1
+    midi = MIDIFile(n_tracks)
+    midi.addTempo(0, 0, bpm)
+    midi.addProgramChange(0, 0, 0, instrument)
 
-    music = mp.piece(tracks=all_tracks,
-                  instruments=instruments,
-                  channels=channels,
-                  bpm=bpm_mol,
-                  name=compound)
-    filename = f"{compound}_audio_spectrum_alternative_version.mid"
+    current_beat = 0.0
+    for i, (wavenumber, prominence, width_wn) in enumerate(peaks):
+        pitch       = wavenumber_to_midi(wavenumber)
+        velocity    = int(max(45, min(110, 45 + (prominence / 100) * 65)))
+        width_ratio = (width_wn - min_w) / width_range
+        duration    = 0.5 + width_ratio * 1.5      # 0.5–2.0 beats from FWHM
+        midi.addNote(0, 0, pitch, current_beat, duration, velocity)
+        current_beat += intervals[i]
 
-    mp.write(current_chord=music, name=filename)
+    if drum_track:
+        midi.addTempo(1, 0, bpm)
+        start_mark = int(math.ceil(min(wavenumbers) / 100)) * 100
+        end_mark   = int(math.floor(max(wavenumbers) / 100)) * 100
+        all_marks  = list(range(start_mark, end_mark + 1, 100))
 
-    return filename #returns the name of the file which can then be used in streamlit hopefully
+        if all_marks:
+            drum_interval = target_beats / len(all_marks)
+            for j, mark in enumerate(all_marks):
+                # Kick drum (MIDI 36) every 500 cm⁻¹, hi-hat (MIDI 42) every 100 cm⁻¹
+                drum_pitch = 36 if mark % 500 == 0 else 42
+                midi.addNote(1, 9, drum_pitch, j * drum_interval, drum_interval * 0.5, 80)
 
-# mini test
-if __name__ == "__main__":
-    result = molecular_music('57-50-1')
-    print(f"File created : {result}")
-    print (f"The sound chosen is: {molecular_weight_to_sound_code('57-50-1')}")
+    with open(output_path, "wb") as f:
+        midi.writeFile(f)

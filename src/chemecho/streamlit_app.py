@@ -1,14 +1,23 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import nistchempy as nist
 import pandas as pd
 import requests
 import tempfile
 import os
+import base64
 from rdkit import Chem
 from rdkit.Chem import Draw
 
 from get_spectrum import extract_spectrum_data, ir_graph, from_df_to_csv
-from musification_v2 import spectrum_to_midi
+import importlib.util, pathlib
+_mus_spec = importlib.util.spec_from_file_location(
+    "musification",
+    pathlib.Path(__file__).parent / "musification_2.0.py"
+)
+_mus_mod = importlib.util.module_from_spec(_mus_spec)
+_mus_spec.loader.exec_module(_mus_mod)
+molecular_music = _mus_mod.molecular_music
 
 
 def name_to_cas(name: str) -> str:
@@ -53,7 +62,7 @@ def draw_molecule(smiles: str):
 
 # ── UI ────────────────────────────────────────────────────────────────────────
 
-st.title("ChemEcho")
+st.title("Chem Echo 🎶")
 st.write("Enter a molecule name to see its structure, IR spectrum, and hear it as music.")
 
 name = st.text_input("Molecule name", placeholder="e.g. acetone, ethanol, caffeine")
@@ -101,16 +110,33 @@ if st.button("Generate") and name:
             with tempfile.NamedTemporaryFile(suffix=".mid", delete=False) as tmp:
                 midi_path = tmp.name
 
-            spectrum_to_midi(compound, midi_path, data=data)
+            try:
+                molecular_music(compound, midi_path, data=data)
+                with open(midi_path, "rb") as f:
+                    midi_bytes = f.read()
+            finally:
+                if os.path.exists(midi_path):
+                    os.remove(midi_path)
 
-            with open(midi_path, "rb") as f:
-                st.download_button(
-                    label="Download MIDI",
-                    data=f,
-                    file_name=f"{compound.name}.mid",
-                    mime="audio/midi"
-                )
-            os.remove(midi_path)
+            st.markdown("**Listen**")
+            midi_b64 = base64.b64encode(midi_bytes).decode()
+            components.html(f"""
+                <script src="https://cdn.jsdelivr.net/npm/tone@14/build/Tone.js"></script>
+                <script src="https://cdn.jsdelivr.net/npm/@magenta/music@1.23.1/es6/core.js"></script>
+                <script src="https://cdn.jsdelivr.net/npm/html-midi-player@1.5.0"></script>
+                <midi-player
+                    src="data:audio/midi;base64,{midi_b64}"
+                    sound-font
+                    style="width:100%;margin-top:4px">
+                </midi-player>
+            """, height=120)
+
+            st.download_button(
+                label="Download MIDI",
+                data=midi_bytes,
+                file_name=f"{compound.name}.mid",
+                mime="audio/midi"
+            )
 
         except Exception as e:
             st.error(f"Something went wrong: {e}")
