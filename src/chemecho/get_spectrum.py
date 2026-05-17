@@ -11,8 +11,8 @@ def extract_spectrum_data(compound, index_spectrum: int = 0):
     """extract .jdx files of IR spectrum from NIST documentation
 
     Args:
-        cas (str): CAS number of the compound of interest
-        index_spectrum (int): the index of the spectra wanted in the list of spectrum of the compound of interest
+        compound (NistCompound object): compound of interest
+        index_spectrum (int): the index of the spectra wanted in the list of spectrum of the compound of interest, default is 0
 
     Return:
         tuple (list, list): two lists of values, the wavenumbers in 1/cm and the transmittance in %
@@ -44,6 +44,8 @@ def extract_spectrum_data(compound, index_spectrum: int = 0):
 
         data_x = data['x']
         data_y = data['y']
+        
+        print(f"premier wavenumber: {data_x[0]}, dernier wavenumber: {data_x[-1]}")
 
         if data.get('yunits') == "Absorbance" or data.get('yunits') == "ABSORBANCE" :
             for i in range(0, len(data_y)):
@@ -98,6 +100,6 @@ def from_df_to_csv(df_spectrum) :
     return df_spectrum.to_csv(buffer_csv, index=False)
 
 #ir_graph(extract_spectrum_data('50-78-2'),'50-78-2')
-"""if __name__ == "__main__":
+#if __name__ == "__main__":
     result_graph = ir_graph(extract_spectrum_data('50-78-2'),'50-78-2')
-    print(f"IR spectrum plotted for 50-78-2")"""
+    print(f"IR spectrum plotted for 50-78-2")

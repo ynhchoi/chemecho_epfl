@@ -40,8 +40,8 @@ def peak_detection (wavenumbers, transmittances) -> list :
     """
     Removes the tiny noise so the final music is a little more pleasing
     
-    arg (str): CAS number of compound
-    return (list): list corresponding to spectrum without noise
+    args (list), (list): two lists of wavenumbers and transmittances
+    return (list): list of tuples corresponding to spectrum without noise
     
     """
     
@@ -63,10 +63,10 @@ def molecular_music (extracted_data, compound, bpm_mol=120):
     Translates IR spectrum to music.
 
     The audio-spectrum frequency varies with a signal: if low transmittance:high frequency
-    Saves to a MIDI file, that can be incorporated in Streamlit app (or played with VLC media player).
+    Saves to a MIDI file, that can be incorporated in Streamlit app (or played with media player).
 
     Args (tuple), (NistCompound object), (int) : tuple of lists (data for wavenumbers and for transmittances), 
-    compound object from NIST database, bpm of music it default is 120 bpm
+    compound object from NIST database, default bpm of music is 120 bpm
     Return (str) : Filename of music generated, to be included in Streamlit
     """
     print(type(compound))
