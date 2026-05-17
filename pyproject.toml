@@ -9,7 +9,14 @@ requires-python = ">=3.10"
 license = {file = "LICENSE"}
 description = "None"
 dependencies = [
-    # "rdkit",
+    "rdkit",
+    "matplotlib",
+    "nistchempy=1.0.5"
+    "pandas",
+    "streamlit",
+    "streamlit_ketcher",
+    "musicpy", 
+    "jcamp"
 ]
 authors = [
     {name = "None", email = "None"}

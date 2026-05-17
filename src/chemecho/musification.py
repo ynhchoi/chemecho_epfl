@@ -1,28 +1,27 @@
-import chemecho_epfl.src.chemecho.get_spectrum as spect
+import get_spectrum as spect
 import numpy as np
 import musicpy as mp
 from musicpy.daw import *
-from io import StringIO
-import os
+import nistchempy as nist
+from get_spectrum import extract_spectrum_data
 
 
-def molecular_weight_to_sound_code(compound_cas : str) -> int :
+def molecular_weight_to_sound_code(compound) -> int :
 
     """
     Associates an instrument to the molecular weight (heavier molecule corresponds to lower instrument)
     
     Arg:
-        (str) : CAS number of compound
+        (NistCompound object) 
 
     Return 
         (int) : int corresponding to an instrument in General MIDI Instruments
     """
-    if not isinstance(compound_cas, str):
-        raise TypeError (f"Invalid type {type(compound_cas)}: CAS number must be a string")
+    #if not isinstance(compound_cas, str):
+    #    raise TypeError (f"Invalid type {type(compound_cas)}: CAS number must be a string")
     
-    compound = spect.nist.get_compound(compound_cas)
-    if compound is None:
-        raise ValueError (f"Could not find a compound in the database for the specified CAS number {compound_cas}")
+    #if compound is None:
+    #    raise ValueError (f"Could not find a compound in the database for the specified CAS number {compound_cas}")
 
     molecular_weight_compound = compound.mol_weight
     if molecular_weight_compound < 50 :
@@ -47,6 +46,7 @@ def peak_detection (wavenumbers, transmittances) -> list :
     """
     
     peaks =[]
+    
     threshold = max(transmittances)-0.1*(max(transmittances)-min(transmittances))
     for i in range(1, len(transmittances) - 1):
         if transmittances[i] < threshold:
@@ -57,7 +57,7 @@ def peak_detection (wavenumbers, transmittances) -> list :
 
 
 
-def molecular_music (cas, bpm_mol=120):
+def molecular_music (extracted_data, compound, bpm_mol=120):
 
     """
     Translates IR spectrum to music.
@@ -65,16 +65,17 @@ def molecular_music (cas, bpm_mol=120):
     The audio-spectrum frequency varies with a signal: if low transmittance:high frequency
     Saves to a MIDI file, that can be incorporated in Streamlit app (or played with VLC media player).
 
-    Args (str), (int) : CAS number of compound, bpm of music it default is 120 bpm
+    Args (tuple), (NistCompound object), (int) : tuple of lists (data for wavenumbers and for transmittances), 
+    compound object from NIST database, bpm of music it default is 120 bpm
     Return (str) : Filename of music generated, to be included in Streamlit
     """
-    extracted_data = spect.extract_spectrum_data(cas)
+    print(type(compound))
     wavenumbers = extracted_data[0]
     transmittances = extracted_data[1]
     peaks = peak_detection(wavenumbers, transmittances)
     print (len(peaks))
-    compound = spect.nist.get_compound(cas).name
-    instru = molecular_weight_to_sound_code(cas)
+    compound_name = compound.name
+    instru = molecular_weight_to_sound_code(compound)
 
     notes=[]
     target_duration_beats = 30
@@ -141,8 +142,8 @@ def molecular_music (cas, bpm_mol=120):
                   instruments=instruments,
                   channels=channels,
                   bpm=bpm_mol,
-                  name=compound)
-    filename = f"{compound}_audio_spectrum_alternative_version.mid"
+                  name=compound_name)
+    filename = f"{compound_name}_audio_spectrum.mid"
 
     mp.write(current_chord=music, name=filename)
 
@@ -150,6 +151,6 @@ def molecular_music (cas, bpm_mol=120):
 
 # mini test
 if __name__ == "__main__":
-    result = molecular_music('57-50-1')
+    result = molecular_music(extract_spectrum_data(nist.get_compound('57-50-1')), nist.get_compound('57-50-1'))
     print(f"File created : {result}")
     print (f"The sound chosen is: {molecular_weight_to_sound_code('57-50-1')}")
