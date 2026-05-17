@@ -11,18 +11,9 @@ chemecho
 
 None
 
-## 🔥 Usage
+## 🔥 Discover ChemEcho, the app that makes molecules sing!
 
-```python
-from mypackage import main_func
-
-# One line to rule them all
-result = main_func(data)
-```
-
-This usage example shows how to quickly leverage the package's main functionality with just one line of code (or a few lines of code). 
-After importing the `main_func` (to be renamed by you), you simply pass in your `data` and get the `result` (this is just an example, your package might have other inputs and outputs). 
-Short and sweet, but the real power lies in the detailed documentation.
+ChemEcho is a tool to translate IR spectrum into music, making accessible the data for blind or visually impaired person. This package is also intended for curious people who wants to discover a new fun and cool approach to compare molecules. 
 
 ## 👩‍💻 Installation
 
@@ -42,7 +33,7 @@ If you need jupyter lab, install it
 ```
 (chemecho) $ pip install jupyterlab
 ```
-
+If somehow you miss one or several packages needed for the app after the installation, here is the list of the requirements: matplotlib, streamlit, jcamp, musicpy, nistchempy
 
 ## 🛠️ Development installation
 
@@ -74,6 +65,18 @@ To install the package, run
 (conda_env) $ pip install tox
 (conda_env) $ tox
 ```
+
+
+```python
+from mypackage import main_func
+
+# One line to rule them all
+result = main_func(data)
+```
+
+This usage example shows how to quickly leverage the package's main functionality with just one line of code (or a few lines of code). 
+After importing the `main_func` (to be renamed by you), you simply pass in your `data` and get the `result` (this is just an example, your package might have other inputs and outputs). 
+Short and sweet, but the real power lies in the detailed documentation.
 
 
 

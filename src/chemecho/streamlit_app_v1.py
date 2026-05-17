@@ -3,21 +3,14 @@ import streamlit.components.v1 as components
 import nistchempy as nist
 import pandas as pd
 import requests
-import tempfile
 import os
+import io
 import base64
 from rdkit import Chem
 from rdkit.Chem import Draw
 
 from get_spectrum import extract_spectrum_data, ir_graph, from_df_to_csv
-import importlib.util, pathlib
-_mus_spec = importlib.util.spec_from_file_location(
-    "musification",
-    pathlib.Path(__file__).parent / "musification_2.0.py"
-)
-_mus_mod = importlib.util.module_from_spec(_mus_spec)
-_mus_spec.loader.exec_module(_mus_mod)
-molecular_music = _mus_mod.molecular_music
+from musification import molecular_music
 
 
 def name_to_cas(name: str) -> str:
@@ -69,10 +62,11 @@ name = st.text_input("Molecule name", placeholder="e.g. acetone, ethanol, caffei
 
 if st.button("Generate") and name:
     with st.spinner("Fetching data..."):
-        try:
+        try:           
             # Name → CAS
             cas = name_to_cas(name)
             compound = nist.get_compound(cas)
+            data = extract_spectrum_data(compound)
             st.subheader(compound.name)
             st.caption(f"CAS: {cas}")
 
@@ -93,30 +87,29 @@ if st.button("Generate") and name:
             # IR spectrum
             with col2:
                 st.markdown("**IR spectrum**")
-                data = extract_spectrum_data(compound)
                 fig, ax = ir_graph(data, compound.name)
                 st.pyplot(fig)
+                buffer = io.StringIO()
+                fig.savefig(buffer, format="svg")
+                svg = buffer.getvalue()
 
-            # CSV download
-            df = pd.DataFrame({"Wavenumber": data[0], "Transmittance": data[1]})
-            st.download_button(
-                label="Download spectrum as CSV",
-                data=from_df_to_csv(df),
-                file_name=f"{cas}_spectrum.csv",
-                mime="text/csv"
-            )
+                st.download_button(
+                label="Download spectrum as SVG",
+                data=svg,
+                file_name=f"{compound.name}_spectrum.csv",
+                mime="image/svg+xml")
+
 
             # MIDI generation
-            with tempfile.NamedTemporaryFile(suffix=".mid", delete=False) as tmp:
-                midi_path = tmp.name
-
             try:
-                molecular_music(compound, midi_path, data=data)
+                midi_path = molecular_music(data, compound, tempo)
+
                 with open(midi_path, "rb") as f:
                     midi_bytes = f.read()
             finally:
                 if os.path.exists(midi_path):
                     os.remove(midi_path)
+            
 
             st.markdown("**Listen**")
             midi_b64 = base64.b64encode(midi_bytes).decode()
@@ -129,7 +122,7 @@ if st.button("Generate") and name:
                     sound-font
                     style="width:100%;margin-top:4px">
                 </midi-player>
-            """, height=120)
+            """, height=150)
 
             st.download_button(
                 label="Download MIDI",

@@ -5,88 +5,80 @@ import os
 import matplotlib.pyplot as plt
 import pandas as pd
 from io import StringIO
-from spectrum_utils import YUNITS_PRIORITY, classify_yunits, to_transmittance, to_wavenumber
 
 
-def _parse_jdx(spec) -> dict:
-    """Parse a nistchempy IR spectrum object into a jcamp dict.
-
-    Args:
-        spec: a nistchempy IR spectrum object with a jdx_text attribute
-    Returns:
-        dict with keys 'x', 'y', 'xunits', 'yunits', etc.
-    """
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.jdx', delete=False) as f:
-        f.write(spec.jdx_text)
-        temp_path = f.name
-    data = jcamp_readfile(temp_path)
-    os.remove(temp_path)
-    return data
-
-
-def _get_yunits(spec) -> str:
-    """Read yunits directly from jdx_text header without full parsing."""
-    for line in spec.jdx_text.splitlines():
-        if '##YUNITS=' in line.upper():
-            return line.split('=', 1)[1].strip()
-    return ''
-
-
-def extract_spectrum_data(compound_or_cas):
-    """Extract IR spectrum from NIST and return it as transmittance (%).
-
-    Searches all available spectra for the compound in priority order:
-        1. TRANSMITTANCE  — used directly, no conversion
-        2. ABSORBANCE     — converted via T = 10^(-A) * 100
-        3. MOLAR_ABSORPTIVITY — approximated as absorbance-like
+def extract_spectrum_data(compound, index_spectrum: int = 0):
+    """extract .jdx files of IR spectrum from NIST documentation
 
     Args:
-        compound_or_cas: CAS number string, or an already-fetched NistCompound object.
-            Pass the compound object when you already have it to avoid a redundant
-            NIST request.
-    Returns:
-        tuple (list, list): wavenumbers in cm⁻¹ and transmittance in %
-    Raises:
-        ValueError: if no spectrum in a supported format is found
+        cas (str): CAS number of the compound of interest
+        index_spectrum (int): the index of the spectra wanted in the list of spectrum of the compound of interest
+
+    Return:
+        tuple (list, list): two lists of values, the wavenumbers in 1/cm and the transmittance in %
     """
-    if isinstance(compound_or_cas, str):
-        X = nist.get_compound(compound_or_cas)
-    else:
-        X = compound_or_cas
 
-    X.get_ir_spectra()
+    #if not isinstance(cas, str):
+    #    raise TypeError (f"Invalid type {type(cas)}: CAS number must be a string")
 
-    if not X.ir_specs:
-        raise ValueError(f"No IR spectra found for {X.name}")
+    
+    if compound is None:
+        raise ValueError (f"Could not find a compound in the database for the specified CAS number {compound.cas_rn}")
+  
+    compound.get_ir_spectra()
+    compound.ir_specs
 
-    # Check yunits from header only, parse only the chosen spectrum
-    for target in YUNITS_PRIORITY:
-        for spec in X.ir_specs:
-            if classify_yunits(_get_yunits(spec)) != target:
-                continue
-            data = _parse_jdx(spec)
-            try:
-                data_x = to_wavenumber(data['x'], data.get('xunits', ''))
-                data_y = to_transmittance(data['y'], data.get('yunits', ''))
-                return data_x, data_y
-            except ValueError:
-                continue
+    if len(compound.ir_specs) - index_spectrum == 0:
+        raise ValueError(f"Could not find a spectrum for {compound.name} or {compound.name} has an IR spectrum with y units not convertible in Transmittance")
+    else: 
+        compound_IR = compound.ir_specs[index_spectrum]
+        jdx_content = compound_IR.jdx_text
 
-    raise ValueError(
-        f"Could not read any IR spectrum for {X.name} in a supported format"
-    )
+        # here we need a tempfile bc the data is in a jdx that we need to go through to extract the data
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.jdx', delete=False) as f:
+            f.write(jdx_content)
+            temp_path = f.name
+
+        data = jcamp_readfile(temp_path)
+        os.remove(temp_path)
+
+        data_x = data['x']
+        data_y = data['y']
+
+        if data.get('yunits') == "Absorbance" or data.get('yunits') == "ABSORBANCE" :
+            for i in range(0, len(data_y)):
+                data_y[i] = 10**(-data_y[i])
+            max_transmittance = max(data_y)
+            for i in range(0, len(data_y)):
+                data_y[i] = (data_y[i]/max_transmittance)*100
+        elif data.get('yunits') == "Transmittance" or data.get('yunits') == "TRANSMITTANCE" :
+            max_transmittance = max(data_y)
+            for i in range(0, len(data_y)):
+                data_y[i] = (data_y[i]/max_transmittance)*100
+        else :    
+            return extract_spectrum_data(compound,index_spectrum+1)
+
+        if data.get('xunits') == "MICROMETERS" or data.get('xunits') == "Micrometers":
+            for i in range(0, len(data_x)):
+                data_x[i] = 10000/data_x[i]
+        elif data.get('xunits') == "1/CM" or data.get('xunits') == "1/cm" or data.get('xunits') == "cm-1" or data.get('xunits') == "cm -1" :
+            pass
+        else :
+            return extract_spectrum_data(compound,index_spectrum+1)
+
+        return data_x, data_y
 
 
-def ir_graph(data: tuple, compound_name: str):
-    """Plot IR spectra.
+def ir_graph(data : tuple, compound_name : str) :
+    """Plot IR spectra in .svg format
 
     Args:
         data (tuple): the two lists of values (wavenumbers and transmittance)
-        compound_name (str): name of the compound, used for the plot title
+        compound_name (str): name of the compound
     Returns:
-        tuple (fig, ax): matplotlib figure and axes objects
+        .svg: IR spectra
     """
-    df_spectrum = pd.DataFrame({"Wavenumber": data[0], "Transmittance": data[1]})
+    df_spectrum = pd.DataFrame({"Wavenumber":data[0], "Transmittance":data[1]})
 
     fig, ax = plt.subplots()
     ax.plot(df_spectrum["Wavenumber"], df_spectrum["Transmittance"], color="black")
@@ -103,9 +95,9 @@ def ir_graph(data: tuple, compound_name: str):
 
 def from_df_to_csv(df_spectrum) :
     buffer_csv = StringIO()
-    df_spectrum.to_csv(buffer_csv, index=False)
-    return buffer_csv.getvalue()
+    return df_spectrum.to_csv(buffer_csv, index=False)
 
-
-if __name__ == "__main__":
-    ir_graph(extract_spectrum_data('74-85-1'), '74-85-1')
+#ir_graph(extract_spectrum_data('50-78-2'),'50-78-2')
+"""if __name__ == "__main__":
+    result_graph = ir_graph(extract_spectrum_data('50-78-2'),'50-78-2')
+    print(f"IR spectrum plotted for 50-78-2")"""
