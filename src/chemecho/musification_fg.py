@@ -65,7 +65,7 @@ FG_CATALOG = {
     'C=C (alkene)':     {'smarts': '[CX3]=[CX3;!c]',   'region': (1600, 1680), 'instrument': 41, 'pitch': ('B', 4)},
     'aromatic ring':    {'smarts': '[a]',              'region': (1450, 1610), 'instrument': 74, 'pitch': ('A', 4)},
     'C-O':              {'smarts': '[CX4][OX2]',       'region': (1000, 1300), 'instrument': 61, 'pitch': ('G', 4)},
-    'N=O (nitro)':      {'smarts': '[NX3](=O)=O',      'region': (1300, 1600), 'instrument': 57, 'pitch': ('F', 4)},
+    'N=O (nitro)':      {'smarts': '[N+](=O)[O-]',     'region': (1300, 1600), 'instrument': 57, 'pitch': ('F', 4)},
 }
 
 
