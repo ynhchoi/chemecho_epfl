@@ -3,7 +3,7 @@
 ![Coverage Status](assets/coverage-badge.svg)
 
 <h1 align="center">
-chemecho
+Chem Echo
 </h1>
 
 <br>
@@ -11,9 +11,9 @@ chemecho
 
 None
 
-## 🔥 Discover ChemEcho, the app that makes molecules sing! 🎶
+## 🔥 Discover Chem Echo, the app that makes molecules sing! 🎶
 
-ChemEcho is a tool to translate IR spectrum into music, making accessible the data for blind or visually impaired person. This package is also intended for curious people who wants to discover a new fun and cool approach to compare molecules. 
+Chem Echo is a tool to translate IR spectrum into music, making accessible the data for blind or visually impaired person. This package is also intended for curious people who wants to discover a new fun and cool approach to compare molecules. 
 
 To maximize the information contained in the audio file, ChemEcho does not only provide a literal translation but also:
 - choice of instrument based on the logP (hence polarity) of the molecule of interest

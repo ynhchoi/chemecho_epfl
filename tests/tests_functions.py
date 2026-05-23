@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 sys.path.append(str(Path(__file__).parent.parent / "src\chemecho"))
 
 from get_spectrum import extract_spectrum_data, ir_graph
-from streamlit_app_v2 import name_to_cas, get_smiles, draw_molecule
+#from app import 
 #from musification import 
 
 def test_extract_spectrum_data():
