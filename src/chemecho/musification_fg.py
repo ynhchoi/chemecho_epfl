@@ -32,6 +32,18 @@ from musification import molecular_weight_to_sound_code, peak_detection
 #               conjugation, H-bonding, and ring-strain shifts (e.g. amide
 #               C=O can drop to ~1650).
 #   instrument: General MIDI program number.
+                #    73:piccolo
+                #    71:bassoon
+                #    68:baritone saxophone
+                #    25:nylon string guitar
+                #    26:steel string guitar
+                #    11:music box
+                #    12:vibraphone
+                #    56:orchestra hit
+                #    40:synth bass 2
+                #    74:Flute
+                #    60:muted trumpet
+                #    57:trumpet
 #   pitch:      (note name, octave) signature pitch.
 #
 # When a detected peak falls inside multiple regions belonging to FGs that are
@@ -216,7 +228,7 @@ def molecular_music_fg(extracted_data, compound, smiles: str):
     """
     wavenumbers = extracted_data[0]
     transmittances = extracted_data[1]
-    
+
     if wavenumbers[0] < wavenumbers[-1]:
         wavenumbers = wavenumbers[::-1]
         transmittances = transmittances[::-1]
