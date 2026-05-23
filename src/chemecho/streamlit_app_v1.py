@@ -13,7 +13,6 @@ from rdkit import Chem
 from rdkit.Chem import Draw, AllChem
 
 from get_spectrum import extract_spectrum_data, ir_graph, from_df_to_csv
-from musification import molecular_music
 from musification_fg import molecular_music_fg
 
 
@@ -142,30 +141,108 @@ def molecule_3d_html(smiles: str) -> str | None:
     view = py3Dmol.view(width="100%", height=380)
     view.addModel(molblock, "mol")
     view.setStyle({"stick": {"colorscheme": "Jmol"}, "sphere": {"scale": 0.25, "colorscheme": "Jmol"}})
-    view.setBackgroundColor("#0e1117")
+    view.setBackgroundColor("white")
     view.zoomTo()
-    view.spin(True)
     return view._make_html()
+
+
+# ── Page config (must be first Streamlit call) ────────────────────────────────
+
+st.set_page_config(
+    page_title="ChemEcho",
+    page_icon="🎶",
+    layout="wide",
+    menu_items={
+        "About": "ChemEcho — sonification of IR spectra for accessible chemistry.",
+    },
+)
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 
-st.sidebar.markdown("# Options")
-musification_version = st.sidebar.radio(
-    "Musification",
-    ["v1 (basic)", "v2 (functional groups)"],
-    index=1,
-)
-if musification_version == "v1 (basic)":
-    tempo = st.sidebar.slider("Tempo (BPM)", 20, 200, 120)
+with st.sidebar:
+    st.markdown("# About")
+    st.markdown(
+        "ChemEcho turns an IR spectrum into music so the structure and "
+        "functional groups of a molecule can be perceived through sound."
+    )
+    st.markdown("---")
+    st.markdown("**Sound layers**")
+    st.markdown(
+        "- 🥁 Carbon prelude — one drum hit per carbon atom\n"
+        "- 🎻 Cello melody — traces the IR transmittance contour\n"
+        "- 🎺 Functional-group accents — distinctive instrument per FG\n"
+        "- 🎼 Tempo — scales with molecular weight (lighter = faster)"
+    )
 
 
 # ── UI ────────────────────────────────────────────────────────────────────────
 
 st.title("Chem Echo 🎶")
-st.write("Enter a molecule name, CAS number, molecular formula, or SMILES to see its structure, IR spectrum, and hear it as music.")
+st.write(
+    "See a molecule's structure, IR spectrum, and hear it as music. "
+    "Designed to make IR spectroscopy accessible through sound."
+)
+st.markdown(
+    "**Enter *any one* of the following — just one is enough:**\n"
+    "- 🏷️ **Name** — e.g. `caffeine`, `acetone`, `aspirin`\n"
+    "- 🔢 **CAS number** — e.g. `67-64-1` (acetone)\n"
+    "- 🧪 **Molecular formula** — e.g. `C6H6` (benzene)\n"
+    "- 🧬 **SMILES** — e.g. `CC(=O)C` (acetone)"
+)
 
-query = st.text_input("Molecule", placeholder="e.g. caffeine  |  67-64-1  |  C6H6  |  CC(=O)C")
+with st.expander("ℹ️ How to listen — what each sound means"):
+    st.markdown(
+        """
+The music is built from your molecule's infrared (IR) spectrum, in four layers
+that play together:
+
+**1. Carbon prelude** (the very beginning)
+A short drum sequence — one hit per carbon atom — counts the molecule's
+carbon skeleton before the spectrum starts.
+
+**2. Cello main melody**
+A cello traces the IR spectrum shape. Deeper absorption peaks (lower
+transmittance) produce higher pitches. The melody plays from high wavenumber
+to low — the conventional left-to-right direction of an IR plot.
+
+**3. Wavenumber ruler (background drums)**
+A snare drum marks every 100 cm⁻¹, a kick drum every 500 cm⁻¹. These act
+as your "axis ticks" so you can orient where you are in the spectrum.
+
+**4. Functional-group accents**
+When a known IR absorption band is both predicted from the structure
+(SMARTS pattern) **and** confirmed by a real peak in the spectrum, a
+distinctive instrument plays a signature pitch at that moment:
+
+| Functional group | Instrument |
+|---|---|
+| O–H (alcohol) | piccolo |
+| O–H (carboxylic acid) | clarinet |
+| N–H | oboe |
+| C–H (saturated) | nylon guitar |
+| C–H (aromatic) | steel guitar |
+| C≡N (nitrile) | music box |
+| C≡C (alkyne) | vibraphone |
+| C=O (carbonyl) | orchestra hit |
+| C=C (alkene) | violin |
+| aromatic ring | flute |
+| C–O | French horn |
+| N=O (nitro) | trumpet |
+
+Louder accent = deeper (more prominent) IR peak.
+
+**Tempo encodes molecular weight.** Lighter molecules play faster, heavier
+slower — derived from kinetic theory (Maxwell-Boltzmann mean speed),
+bounded to 60–120 BPM so the music always stays intelligible.
+        """
+    )
+
+query = st.text_input(
+    "Molecule",
+    placeholder="e.g. caffeine  |  67-64-1  |  C6H6  |  CC(=O)C",
+    help="Accepts a compound name, CAS number, molecular formula, or SMILES string.",
+)
 
 if st.button("Generate") and query:
     with st.spinner("Fetching data..."):
@@ -188,7 +265,10 @@ if st.button("Generate") and query:
                     with tab_2d:
                         img = draw_molecule(smiles)
                         if img:
-                            st.image(img)
+                            st.image(
+                                img,
+                                caption=f"2D skeletal structure of {compound.name}",
+                            )
                     with tab_3d:
                         html_3d = molecule_3d_html(smiles)
                         if html_3d:
@@ -204,6 +284,13 @@ if st.button("Generate") and query:
                 st.markdown("**IR spectrum**")
                 fig, ax = ir_graph(extracted_data, compound.name)
                 st.pyplot(fig)
+                wn_min = int(min(extracted_data[0]))
+                wn_max = int(max(extracted_data[0]))
+                st.caption(
+                    f"IR transmittance spectrum of {compound.name}, "
+                    f"covering {wn_min} to {wn_max} cm⁻¹. "
+                    f"{len(extracted_data[0])} data points."
+                )
                 buffer = io.StringIO()
                 fig.savefig(buffer, format="svg")
                 svg = buffer.getvalue()
@@ -214,19 +301,17 @@ if st.button("Generate") and query:
                     file_name=f"{compound.name}_spectrum.svg",
                     mime="image/svg+xml")
 
+            if not smiles:
+                raise ValueError(
+                    "SMILES not available — functional-group detection requires "
+                    "a valid SMILES from PubChem."
+                )
+
             # MIDI generation
             midi_path = None
             legend = None
             try:
-                if musification_version == "v1 (basic)":
-                    midi_path = molecular_music(extracted_data, compound, tempo)
-                else:
-                    if smiles:
-                        midi_path, legend = molecular_music_fg(extracted_data, compound, smiles)
-                    else:
-                        st.warning("SMILES not available — falling back to v1.")
-                        midi_path = molecular_music(extracted_data, compound, 120)
-
+                midi_path, legend = molecular_music_fg(extracted_data, compound, smiles)
                 with open(midi_path, "rb") as f:
                     midi_bytes = f.read()
             finally:
@@ -234,6 +319,32 @@ if st.button("Generate") and query:
                     os.remove(midi_path)
 
             st.markdown("**Listen**")
+
+            # Context-aware "what you're about to hear" — molecule-specific.
+            # Helps blind / VI users and first-time listeners orient before playback.
+            preview_parts = []
+            if legend['carbon_count'] > 0:
+                preview_parts.append(
+                    f"{legend['carbon_count']} drum hit"
+                    f"{'s' if legend['carbon_count'] != 1 else ''} for carbon count"
+                )
+            preview_parts.append(f"cello melody at {legend['bpm']} BPM")
+            n_fgs = len(legend['fgs'])
+            if n_fgs > 0:
+                preview_parts.append(
+                    f"{n_fgs} functional-group accent"
+                    f"{'s' if n_fgs != 1 else ''}"
+                )
+            st.info("🎧 You'll hear: " + " → ".join(preview_parts) + ".")
+
+            # Web-friendly GM SoundFont (Magenta format). html-midi-player only
+            # supports Magenta-format banks, so this is currently the best
+            # publicly-hosted general-MIDI option. The same MIDI file will
+            # sound different in desktop DAWs (GarageBand, Logic, etc.) because
+            # those use their own, much larger instrument libraries.
+            _SOUNDFONT_URL = (
+                "https://storage.googleapis.com/magentadata/js/soundfonts/sgm_plus"
+            )
             midi_b64 = base64.b64encode(midi_bytes).decode()
             components.html(f"""
                 <script src="https://cdn.jsdelivr.net/npm/tone@14/build/Tone.js"></script>
@@ -241,8 +352,9 @@ if st.button("Generate") and query:
                 <script src="https://cdn.jsdelivr.net/npm/html-midi-player@1.5.0"></script>
                 <midi-player
                     src="data:audio/midi;base64,{midi_b64}"
-                    sound-font
-                    style="width:100%;margin-top:4px">
+                    sound-font="{_SOUNDFONT_URL}"
+                    style="width:100%;margin-top:4px"
+                    aria-label="MIDI player for {compound.name} spectrum sonification">
                 </midi-player>
             """, height=150)
 
@@ -253,19 +365,43 @@ if st.button("Generate") and query:
                 mime="audio/midi"
             )
 
-            # FG legend (v2 only)
+            # FG legend (v2 only) — presented BOTH as a textual list (for screen
+            # readers) AND as a table (for sighted users).
             if legend:
                 st.markdown("**Detected functional groups**")
-                st.caption(f"BPM: {legend['bpm']}  ·  Carbon count: {legend['carbon_count']}")
-                rows = [
-                    {
-                        "Functional group": fg,
-                        "Region (cm⁻¹)": f"{info['region'][0]}–{info['region'][1]}",
-                        "Peaks detected": info['n_peaks'],
-                    }
-                    for fg, info in legend['fgs'].items()
-                ]
-                st.table(pd.DataFrame(rows))
+                st.markdown(
+                    f"Molecular weight: **{compound.mol_weight:.2f} g/mol**  ·  "
+                    f"Carbon count: **{legend['carbon_count']}**  ·  "
+                    f"Tempo: **{legend['bpm']} BPM**"
+                )
+
+                if legend['fgs']:
+                    st.markdown(
+                        f"Found **{len(legend['fgs'])}** functional group"
+                        f"{'s' if len(legend['fgs']) != 1 else ''}:"
+                    )
+                    for fg, info in legend['fgs'].items():
+                        lo, hi = info['region']
+                        n = info['n_peaks']
+                        st.markdown(
+                            f"- **{fg}** — {n} peak{'s' if n != 1 else ''} "
+                            f"in {lo}–{hi} cm⁻¹"
+                        )
+
+                    rows = [
+                        {
+                            "Functional group": fg,
+                            "Region (cm⁻¹)": f"{info['region'][0]}–{info['region'][1]}",
+                            "Peaks detected": info['n_peaks'],
+                        }
+                        for fg, info in legend['fgs'].items()
+                    ]
+                    st.table(pd.DataFrame(rows))
+                else:
+                    st.markdown(
+                        "No functional groups confirmed in this spectrum "
+                        "(no IR peaks fell in any catalog region)."
+                    )
 
         except Exception as e:
             st.error(f"Something went wrong: {e}")
