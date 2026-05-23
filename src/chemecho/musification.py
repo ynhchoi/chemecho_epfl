@@ -1,9 +1,8 @@
-import get_spectrum as spect
 import numpy as np
 import musicpy as mp
 from musicpy.daw import *
 import nistchempy as nist
-from get_spectrum import extract_spectrum_data
+
 
 
 def molecular_weight_to_sound_code(compound) -> int :
@@ -12,10 +11,10 @@ def molecular_weight_to_sound_code(compound) -> int :
     Associates an instrument to the molecular weight (heavier molecule corresponds to lower instrument)
     
     Arg:
-        (NistCompound object) 
+        compound (nist.compound.NistCompound): compound object from NIST database
 
     Return 
-        (int) : int corresponding to an instrument in General MIDI Instruments
+        (int): int corresponding to an instrument in General MIDI Instruments
     """
     #if not isinstance(compound_cas, str):
     #    raise TypeError (f"Invalid type {type(compound_cas)}: CAS number must be a string")
@@ -34,14 +33,23 @@ def molecular_weight_to_sound_code(compound) -> int :
         return 95 #return "Halo pad" sound (heavier)
     else :
         return 99 #return "Crystal" sound (heavy)
+    
 
 def peak_detection (wavenumbers, transmittances) -> list :
     
     """
     Removes the tiny noise so the final music is a little more pleasing
     
+<<<<<<< HEAD
+    Args: 
+        wavenumbers (list): list of wavenumbers values
+        transmitances (list): list of transmittance values
+    Return:
+        (list): list of tuple corresponding to spectrum without noise
+=======
     args (list), (list): two lists of wavenumbers and transmittances
     return (list): list of tuples corresponding to spectrum without noise
+>>>>>>> 5ddc3f627d3f133d951dbd4563492bf329428600
     
     """
     
@@ -65,10 +73,21 @@ def molecular_music (extracted_data, compound, bpm_mol=120):
     The audio-spectrum frequency varies with a signal: if low transmittance:high frequency
     Saves to a MIDI file, that can be incorporated in Streamlit app (or played with media player).
 
+<<<<<<< HEAD
+    Args:
+        extracted_data (list): list of tuple (data for wavenumbers and for transmittances)
+        compound (nist.compound.NistCompound): compound object from NIST database
+        bpm_mol (int): bpm of music it default is 120 bpm
+    
+    Return:
+        (str): Filename of music generated, to be included in Streamlit
+=======
     Args (tuple), (NistCompound object), (int) : tuple of lists (data for wavenumbers and for transmittances), 
     compound object from NIST database, default bpm of music is 120 bpm
     Return (str) : Filename of music generated, to be included in Streamlit
+>>>>>>> 5ddc3f627d3f133d951dbd4563492bf329428600
     """
+
     print(type(compound))
     wavenumbers = extracted_data[0]
     transmittances = extracted_data[1]
@@ -111,10 +130,10 @@ def molecular_music (extracted_data, compound, bpm_mol=120):
     start_small = int(np.ceil(min_wave / 100)) * 100
     end_small = int(np.floor(max_wave / 100)) * 100
     
-    print(f"interval_value: {interval_value}")
+    """print(f"interval_value: {interval_value}")
     print(f"note_duration: {note_duration}")
     print(f"durée théorique en beats: {interval_value * len(peaks)}")
-    print(f"durée note en ms: {note_duration * (60000/bpm_mol)}")
+    print(f"durée note en ms: {note_duration * (60000/bpm_mol)}")"""
 
     #final music composition !!!
     all_tracks = [notes_track]

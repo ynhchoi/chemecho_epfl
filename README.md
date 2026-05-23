@@ -11,29 +11,43 @@ chemecho
 
 None
 
-## 🔥 Discover ChemEcho, the app that makes molecules sing!
+## 🔥 Discover ChemEcho, the app that makes molecules sing! 🎶
 
 ChemEcho is a tool to translate IR spectrum into music, making accessible the data for blind or visually impaired person. This package is also intended for curious people who wants to discover a new fun and cool approach to compare molecules. 
 
+To maximize the information contained in the audio file, ChemEcho does not only provide a literal translation but also:
+- choice of instrument based on the logP (hence polarity) of the molecule of interest
+- tempo based on the molecular weight, a reminder that the lighter the molecule, the faster the vibrations. 
+
 ## 👩‍💻 Installation
 
-Create a new environment, you may also give the environment a different name. 
+Create a new environment, you may also give the environment a different name. You can activate it
 
 ```
 conda create -n chemecho python=3.10 
-```
-
-```
 conda activate chemecho
-(conda_env) $ pip install .
+```
+Then, install the package using one of the following way. Whether using pip:
+```
+(chemecho) $ pip install chemecho
+```
+Or by cloning the GitHub repository:
+```
+pip install git+github.com:yhchoi/chemecho.git 
 ```
 
-If you need jupyter lab, install it 
+If somehow you miss one or several packages needed for the app after the installation (they should be automatically installed), here is the list of the requirements and how to install them (if needed). 
+``` 
+pip install matplotlib streamlit jcamp musicpy nistchempy io os pandas requests tempfile base64 
+```
+
+An additional module (daw) needs to be installed for the musicpy package. To do so, visit the link: https://musicpy.readthedocs.io/en/latest/Musicpy%20daw%20module/. Read and follow the instruction in the "Preparation before importing" paragraph. 
+
+ChemEcho possesses its own streamlit app. However, if you want to test some functions independantly from the app, you may need a jupyter notebook. If you need jupyter lab, install it 
 
 ```
 (chemecho) $ pip install jupyterlab
 ```
-If somehow you miss one or several packages needed for the app after the installation, here is the list of the requirements: matplotlib, streamlit, jcamp, musicpy, nistchempy
 
 ## 🛠️ Development installation
 
@@ -58,6 +72,8 @@ To install the package, run
 ```
 (chemecho) $ pip install -e ".[test,doc]"
 ```
+
+As for the classic installation, you will need to install the daw module from musicpy package. 
 
 ### Run tests and coverage
 
