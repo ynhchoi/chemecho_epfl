@@ -216,6 +216,11 @@ def molecular_music_fg(extracted_data, compound, smiles: str):
     """
     wavenumbers = extracted_data[0]
     transmittances = extracted_data[1]
+    
+    if wavenumbers[0] < wavenumbers[-1]:
+        wavenumbers = wavenumbers[::-1]
+        transmittances = transmittances[::-1]
+
     if len(wavenumbers) < 3 or len(wavenumbers) != len(transmittances):
         raise ValueError(
             "Spectrum must have at least 3 points and matching wavenumber/"
@@ -223,7 +228,7 @@ def molecular_music_fg(extracted_data, compound, smiles: str):
         )
     peaks = peak_detection(wavenumbers, transmittances)
     compound_name = compound.name
-    instru_main = 42  # Cello
+    instru_main = 89  # Fantasia
     bpm_mol = molecular_weight_to_bpm(compound)
     n_slots = len(peaks)
 
@@ -362,8 +367,8 @@ if __name__ == "__main__":
     from get_spectrum import extract_spectrum_data
 
     # acetone: CAS 67-64-1, SMILES "CC(=O)C"
-    cas = '67-64-1'
-    smiles = 'CC(=O)C'
+    cas = '58-08-2'
+    smiles = 'CN1C=NC2=C1C(=O)N(C(=O)N2C)C'
     compound = nist.get_compound(cas)
     fname, legend = molecular_music_fg(extract_spectrum_data(compound), compound, smiles)
     print(f"File created: {fname}")

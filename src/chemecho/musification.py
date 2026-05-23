@@ -72,6 +72,10 @@ def molecular_music (extracted_data, compound, bpm_mol=120):
     print(type(compound))
     wavenumbers = extracted_data[0]
     transmittances = extracted_data[1]
+    if wavenumbers[0] < wavenumbers[-1]:
+        wavenumbers = wavenumbers[::-1]
+        transmittances = transmittances[::-1]
+
     peaks = peak_detection(wavenumbers, transmittances)
     print (len(peaks))
     compound_name = compound.name
@@ -150,7 +154,7 @@ def molecular_music (extracted_data, compound, bpm_mol=120):
     return filename #returns the name of the file which can then be used in streamlit hopefully
 
 # mini test
-if __name__ == "__main__":
+#if __name__ == "__main__":
     result = molecular_music(extract_spectrum_data(nist.get_compound('57-50-1')), nist.get_compound('57-50-1'))
     print(f"File created : {result}")
     print (f"The sound chosen is: {molecular_weight_to_sound_code('57-50-1')}")
