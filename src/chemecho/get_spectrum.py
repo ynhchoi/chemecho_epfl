@@ -4,20 +4,14 @@ import tempfile
 import os
 import matplotlib.pyplot as plt
 import pandas as pd
-from io import StringIO
 
 
 def extract_spectrum_data(compound, index_spectrum: int = 0):
     """extract .jdx files of IR spectrum from NIST documentation
 
     Args:
-<<<<<<< HEAD
         compound (nist.compound.NistCompound): Nistcompound object from nistchempy package
         index_spectrum (int): the index of the spectra wanted in the list of spectrum of the compound of interest
-=======
-        compound (NistCompound object): compound of interest
-        index_spectrum (int): the index of the spectra wanted in the list of spectrum of the compound of interest, default is 0
->>>>>>> 5ddc3f627d3f133d951dbd4563492bf329428600
 
     Return:
         tuple (list, list): two lists of values, the wavenumbers in 1/cm and the transmittance in %
@@ -49,8 +43,6 @@ def extract_spectrum_data(compound, index_spectrum: int = 0):
 
         data_x = data['x']
         data_y = data['y']
-        
-        print(f"premier wavenumber: {data_x[0]}, dernier wavenumber: {data_x[-1]}")
 
         if data.get('yunits') == "Absorbance" or data.get('yunits') == "ABSORBANCE" or data.get('yunits') == "absorbance":
             for i in range(0, len(data_y)):
@@ -75,36 +67,7 @@ def extract_spectrum_data(compound, index_spectrum: int = 0):
 
         return data_x, data_y
 
-def good_spectrum_count(compound):
-    xunits = {"MICROMETERS", "Micrometers", "micrometers", "1/CM", "1/cm", "cm-1"}
-    yunits = {"ABSORBANCE", "Absorbance", "absorbance", "TRANSMITTANCE", "Transmittance", "transmittance"}
-    
-    compound.get_ir_spectra()
-    compound.ir_specs
-    list_ir = compound.ir_specs
-    print(len(list_ir))
 
-    count = 0
-    good_index = []
-    for i in range(0, len(list_ir)):
-        jdx_content = list_ir[i].jdx_text
-
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.jdx', delete=False) as f:
-            f.write(jdx_content)
-            temp_path = f.name
-
-        data = jcamp_readfile(temp_path)
-        os.remove(temp_path)
-        if data.get('xunits') in xunits and data.get('yunits') in yunits:
-            count += 1
-            good_index.append(i)
-        else:
-            pass
-
-    return count, good_index
-       
-print(good_spectrum_count(nist.get_compound("71-43-2")))
-#extract_spectrum_data(nist.get_compound("71-43-2"), 3)
 
 def ir_graph(data : tuple, compound_name : str) :
     """Plot IR spectra in .svg format
@@ -115,6 +78,7 @@ def ir_graph(data : tuple, compound_name : str) :
     Returns:
         .svg: IR spectra
     """
+
     df_spectrum = pd.DataFrame({"Wavenumber":data[0], "Transmittance":data[1]})
 
     fig, ax = plt.subplots()
@@ -129,14 +93,3 @@ def ir_graph(data : tuple, compound_name : str) :
 
     return fig, ax
 
-
-#ir_graph(extract_spectrum_data('50-78-2'),'50-78-2')
-#if __name__ == "__main__":
-    result_graph = ir_graph(extract_spectrum_data('50-78-2'),'50-78-2')
-<<<<<<< HEAD
-    print(f"IR spectrum plotted for 50-78-2")"""
-
-
-=======
-    print(f"IR spectrum plotted for 50-78-2")
->>>>>>> 5ddc3f627d3f133d951dbd4563492bf329428600
