@@ -32,19 +32,12 @@ else :
             
 
 compound = nist.get_compound(cas)
-#data = extract_spectrum_data(compound)
-spectrum_count, good_index_list = good_spectrum_count(compound)
+data = extract_spectrum_data(compound)
+
 
 st.sidebar.markdown('# Options')
 tempo = st.sidebar.slider("Spectrum music tempo", 20, 200, 120)
-if spectrum_count == 1:
-    st.caption(f"Only one spectrum available for {compound.name}")
-    spectrum_index = good_index_list[0]
-    data = extract_spectrum_data(compound, spectrum_index)
-else:
-    index = st.sidebar.slider("Number of spectrum that can be translated", 1, spectrum_count, 1)
-    spectrum_index = good_index_list[index-1]
-    data = extract_spectrum_data(compound, spectrum_index)
+
 
 
 st.subheader(compound.name)
