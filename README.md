@@ -31,7 +31,7 @@ formula, or SMILES** — and ChemEcho auto-detects which.
 ## 👩‍💻 Installation
 
 ChemEcho supports **Python 3.10, 3.11, and 3.12** on macOS, Linux, and
-Windows. (Python 3.10 required)
+Windows. (Python 3.10 recommended)
 
 Create a new environment (you may give it any name you like) and activate
 it. The same `conda` commands work on macOS, Linux, and Windows — use a
