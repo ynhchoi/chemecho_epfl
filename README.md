@@ -30,8 +30,8 @@ formula, or SMILES** — and ChemEcho auto-detects which.
 
 ## 👩‍💻 Installation
 
-ChemEcho supports **Python 3.10, 3.11, and 3.12** on macOS, Linux, and
-Windows. (Python 3.10 recommended)
+ChemEcho supports **Python 3.10** on macOS, Linux, and
+Windows
 
 Create a new environment (you may give it any name you like) and activate
 it. The same `conda` commands work on macOS, Linux, and Windows — use a
@@ -42,13 +42,7 @@ conda create -n chemecho python=3.10
 conda activate chemecho
 ```
 
-Then install the package. Either from PyPI:
-
-```
-(chemecho) $ pip install chemecho
-```
-
-Or directly from the GitHub repository:
+Then install the package from the GitHub repository:
 
 ```
 (chemecho) $ pip install git+https://github.com/ynhchoi/chemecho_epfl.git
@@ -65,7 +59,7 @@ installation (they should be installed automatically), here is the manual
 fallback:
 
 ```
-pip install rdkit matplotlib nistchempy==1.0.5 pandas streamlit musicpy jcamp requests "numpy>=1.25,<2.0" scipy py3Dmol
+pip install rdkit matplotlib "nistchempy>=2.0.0" pandas streamlit musicpy "jcamp==1.3.0" requests "numpy>=1.25,<2.0" scipy py3Dmol Pillow
 ```
 
 ### Audio rendering — `musicpy.daw`
@@ -75,71 +69,25 @@ rendering. Follow the instructions in the "Preparation before importing"
 paragraph here:
 <https://musicpy.readthedocs.io/en/latest/Musicpy%20daw%20module/>
 
-`musicpy.daw` relies on **FluidSynth**. Install it for your OS, then make
-sure Python can find the shared library:
 
-**macOS (Homebrew):**
+### Launch Streamlit app
 
-```
-brew install fluid-synth
-export DYLD_LIBRARY_PATH=/opt/homebrew/lib
-```
+ChemEcho ships its own Streamlit app. 
 
-(Add the `export` line to `~/.zshrc` or `~/.bash_profile` to make it permanent.)
-
-**Linux (Ubuntu/Debian):**
+Run from the project root:
 
 ```
-sudo apt-get update
-sudo apt-get install -y fluidsynth libfluidsynth-dev
-```
 
-If `musicpy.daw` still cannot find the library, point the loader at it:
-
-```
-export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
-```
-
-(Add it to `~/.bashrc` to make it permanent.)
-
-**Windows:**
-
-Download a FluidSynth release from
-<https://github.com/FluidSynth/fluidsynth/releases>, unzip it, and add the
-folder containing `libfluidsynth-*.dll` to your `PATH`:
-
-- *PowerShell (current session):* `$env:PATH = "C:\path\to\fluidsynth\bin;" + $env:PATH`
-- *Permanent:* System Properties → Environment Variables → edit `Path`.
-
-### Streamlit app
-
-ChemEcho ships its own Streamlit app. How to launch it depends on how you
-installed:
-
-**If you cloned the repository** (run from the project root):
-
-```
 (chemecho) $ streamlit run src/chemecho/streamlit_app.py
 ```
 
-**If you installed from PyPI** (the app file lives inside `site-packages`,
-so let Python locate it for you):
-
-```
-(chemecho) $ streamlit run "$(python -c 'import chemecho, os; print(os.path.join(os.path.dirname(chemecho.__file__), "streamlit_app.py"))')"
-```
-
-On Windows PowerShell, the equivalent one-liner is:
-
-```
-(chemecho) $ streamlit run (python -c "import chemecho, os; print(os.path.join(os.path.dirname(chemecho.__file__), 'streamlit_app.py'))")
-```
 
 If you want to experiment with the functions outside the app, install
 JupyterLab and open the example notebook in `notebooks/report.ipynb`:
 
 ```
 (chemecho) $ pip install jupyterlab
+(chemecho) $ jupyter lab
 ```
 
 ## 🛠️ Development installation
@@ -192,13 +140,8 @@ above).
 
 ### `pip install chemecho` fails with "No matching distribution found"
 Update `pip` (`python -m pip install --upgrade pip`) and make sure your
-environment uses **Python 3.10, 3.11, or 3.12**. If the problem persists,
+environment uses **Python 3.10**. If the problem persists,
 install directly from GitHub using the `pip install git+...` command in § 1.
-
-### `ImportError: ... libfluidsynth ...` when running the app
-FluidSynth is not on Python's library search path. Re-read the
-**Audio rendering — `musicpy.daw`** section above and apply the
-platform-specific fix for your OS.
 
 ### `ValueError: PubChem could not find '<your input>'`
 PubChem did not recognize your input. Double-check the spelling of the
@@ -211,7 +154,7 @@ related compound — not every molecule in the database has IR data.
 
 ### `requests.exceptions.ConnectionError` or `Timeout`
 Network problem reaching PubChem or NIST. Check your internet connection
-(remember: ChemEcho cannot work offline) and retry after a few seconds.
+(remember: ChemEcho cannot work offline) and/or retry after a few seconds.
 
 ### The Streamlit app shows **"No peaks detected"**
 The spectrum may be very flat or noisy. ChemEcho filters out peaks below
