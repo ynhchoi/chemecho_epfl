@@ -22,8 +22,6 @@ from musification_fg import (
 )
 
 
-# ─── synthetic spectrum helper ────────────────────────────────────────────────
-
 def make_synthetic_spectrum(peak_cm1, depths, width=20, wn_range=(500, 4000), n=1000):
     """Build a (wavenumbers, transmittances) pair with Gaussian dips at given cm-1.
 
@@ -35,8 +33,6 @@ def make_synthetic_spectrum(peak_cm1, depths, width=20, wn_range=(500, 4000), n=
         transmittance -= depth * np.exp(-((wavenumbers - pos) ** 2) / (2 * width ** 2))
     return wavenumbers.tolist(), transmittance.tolist()
 
-
-# ─── detect_functional_groups ─────────────────────────────────────────────────
 
 class TestDetectFunctionalGroups:
     def test_empty_string_returns_empty(self):
@@ -81,8 +77,6 @@ class TestDetectFunctionalGroups:
         assert "N=O (nitro)" in detect_functional_groups("c1ccccc1[N+](=O)[O-]")
 
 
-# ─── count carbons ────────────────────────────────────────────────────────────
-
 class TestCountCarbons:
     @pytest.mark.parametrize("smiles,expected", [
         ("", 0),
@@ -98,8 +92,6 @@ class TestCountCarbons:
     def test_known_carbon_counts(self, smiles, expected):
         assert count_carbons(smiles) == expected
 
-
-# ─── find absorption peaks ────────────────────────────────────────────────────
 
 class TestFindAbsorptionPeaks:
     def test_flat_spectrum_returns_empty(self):
@@ -148,9 +140,6 @@ class TestFindAbsorptionPeaks:
         for p in peaks:
             assert p["slot"] == wn.index(p["wavenumber"]) - 1
 
-
-# ─── assign peaks to functional groups ──────────────────────────────────────────────────────
-
 class TestAssignPeaksToFgs:
     @staticmethod
     def _peak(wn, slot=0, trans=50.0, prom=30.0):
@@ -191,8 +180,6 @@ class TestAssignPeaksToFgs:
         assert len(result["C=O (carbonyl)"]) == 2
 
 
-# ─── scale accent volume ─────────────────────────────────────────────────────
-
 class TestScaleAccentVolume:
     def test_max_prom_zero_returns_hi(self):
         assert _scale_accent_volume(0.0, 0.0) == 127
@@ -211,8 +198,6 @@ class TestScaleAccentVolume:
         assert _scale_accent_volume(1.0, 1.0, lo=0, hi=100) == 100
         assert _scale_accent_volume(0.0, 1.0, lo=0, hi=100) == 0
 
-
-# ─── molecular weight to bpm ──────────────────────────────────────────────────
 
 class TestMolecularWeightToBpm:
     def test_light_molecule_returns_bpm_max(self):
@@ -242,8 +227,6 @@ class TestMolecularWeightToBpm:
         assert molecular_weight_to_bpm(compound, bpm_min=80, bpm_max=160) == 160
 
 
-# ─── molecular music fg (integration with mocked compound) ────────────────────
-
 class TestMolecularMusicFg:
     def test_writes_midi_and_returns_legend(self, tmp_path, monkeypatch):
         # Force MIDI to be written into tmp_path so the test cleans up automatically.
@@ -269,8 +252,6 @@ class TestMolecularMusicFg:
         assert legend["fgs"] == {}
         assert legend["carbon_count"] == 0
 
-
-# ─── noise reduction ──────────────────────────────────────────────────────────
 
 class TestNoiseReduction:
 
