@@ -177,7 +177,7 @@ def assign_peaks_to_fgs(detected_peaks: list, present_fgs: list) -> dict:
 def _scale_accent_volume(prominence: float, max_prominence: float,
                          lo: int = 60, hi: int = 127) -> int:
     """
-    Map peak prominence to MIDI velocity so deeper peaks sound louder.
+    Map peak prominence to MIDI volume so deeper peaks sound louder.
     
     Args:
     
