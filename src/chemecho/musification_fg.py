@@ -55,7 +55,7 @@ FG_CATALOG = {
     'N=O (nitro)':      {'smarts': '[N+](=O)[O-]',     'region': (1300, 1600), 'instrument': 57, 'pitch': ('F', 4)},
 }
 
-def peak_detection (wavenumbers, transmittances) -> list :
+def noise_reduction (wavenumbers, transmittances) -> list :
     
     """
     Removes the tiny noise so the final music is a little more pleasing
@@ -81,8 +81,14 @@ def peak_detection (wavenumbers, transmittances) -> list :
 
 def detect_functional_groups(smiles: str) -> list:
     """
-    Return the list of FG_CATALOG entries whose SMARTS pattern matches `smiles`.
-    Empty list if the SMILES cannot be parsed.
+    Detects functional groups in molecule.
+     
+    Args:
+        smiles (str): SMILES of compound
+         
+    Return:
+        (list): the list of FG_CATALOG entries whose SMARTS pattern matches `smiles`.
+                Empty list if the SMILES cannot be parsed.
     """
     if not smiles:
         return []
@@ -99,10 +105,18 @@ def detect_functional_groups(smiles: str) -> list:
 
 def count_carbons(smiles: str) -> int:
     """
-    Total carbon atom count in the molecule. Returns 0 if SMILES is empty,
-    invalid, or the molecule contains no carbon (inorganic) — in which case
-    the carbon-count intro should be skipped.
+    Counts nimber of Carbon atoms in molecule
+
+    Args:
+        smiles (str): SMILES of compound
+    
+    Return:
+        (int): Total carbon atom count in the molecule. Returns 0 if SMILES is empty,
+                invalid, or the molecule contains no carbon (inorganic) — in which case
+                the carbon-count intro should be skipped.
+    
     """
+
     if not smiles:
         return 0
     mol = Chem.MolFromSmiles(smiles)
@@ -114,9 +128,7 @@ def count_carbons(smiles: str) -> int:
 def find_absorption_peaks(wavenumbers, transmittances, prominence_frac: float = 0.05) -> list:
     """
     Locate true local minima of transmittance (= local maxima of absorption)
-    using scipy.signal.find_peaks. Unlike v1's threshold-based peak_detection
-    (which marks every slot below a threshold and therefore fires accents on
-    every slot in a broad band), this returns ONE entry per actual peak.
+    using scipy.signal.find_peaks.
 
     Args:
         wavenumbers (list[float])
@@ -138,7 +150,7 @@ def find_absorption_peaks(wavenumbers, transmittances, prominence_frac: float = 
         return []
     prominence = max(prominence_frac * span, 1e-6)
     indices, props = find_peaks(absorption, prominence=prominence)
-    # Layer 1's peak_detection skips the first and last samples (range(1, len-1)),
+    # Layer 1's noise_reduction skips the first and last samples (range(1, len-1)),
     # so the music timeline uses indices 1..len-2 of the original arrays.
     # We shift slot by -1 here so it directly indexes the music timeline,
     # which keeps accent timing in sync with the main melody track.
@@ -162,6 +174,10 @@ def assign_peaks_to_fgs(detected_peaks: list, present_fgs: list) -> dict:
     the present FG whose region (a) contains the peak's wavenumber and
     (b) is the NARROWEST among the candidates. A peak in no candidate region
     is dropped (no accent fired).
+
+    Args:
+        detected_peaks (list): detected peaks
+        present_fgs (list): functional groups present in compound
 
     Returns:
         dict[str, list[dict]]: fg_name -> peaks assigned to it.
@@ -187,7 +203,19 @@ def assign_peaks_to_fgs(detected_peaks: list, present_fgs: list) -> dict:
 
 def _scale_accent_volume(prominence: float, max_prominence: float,
                          lo: int = 60, hi: int = 127) -> int:
-    """Map peak prominence to MIDI velocity so deeper peaks sound louder."""
+    """Map peak prominence to MIDI velocity so deeper peaks sound louder.
+    
+    Args:
+    
+        prominence (float): intensity of peak
+        max_prominence (float): maximum intensity
+        lo (int): low volume in MIDI
+        hi (int): loud vloume in MIDI
+    
+    Return:
+    
+        (int): scale
+    """
     if max_prominence <= 0:
         return hi
     return int(lo + (hi - lo) * (prominence / max_prominence))
@@ -204,6 +232,16 @@ def molecular_weight_to_bpm(compound, bpm_min: int = 60, bpm_max: int = 120) -> 
     regardless of how extreme the molecular weight is.
 
     Default range 60–120 BPM → music duration 15–30 s at 30 target beats.
+
+    Args:
+
+        compound (NistCompoundObject)
+        bpm_min (int): tempo of music, default is 60 bpm
+        bpm_max (int): max tempo of music, default is 120 bpm
+
+    Return:
+
+        (int): tempo of music
     """
     import math
     M = compound.mol_weight
@@ -218,20 +256,14 @@ def molecular_weight_to_bpm(compound, bpm_min: int = 60, bpm_max: int = 120) -> 
 
 def molecular_music_fg(extracted_data, compound, smiles: str):
     """
-    Hybrid IR sonification with functional-group accents.
+    IR sonification with functional-group accents, carbon count,
+    tempo adapted to molecular weight, and volume varying with peak intensity.
 
-    Improvements over the first version of this file:
-      - True local-minimum peak detection (scipy.signal.find_peaks) replaces
-        threshold filtering. Each absorption band now fires ONE accent at its
-        deepest point, not a dense burst across the whole band.
-      - Narrowness-based disambiguation when FG regions overlap, so a peak
-        is never claimed by two functional groups simultaneously.
-      - FG regions slightly widened to catch conjugated / H-bonded shifts
-        (e.g. amide C=O at ~1660).
-      - "aromatic ring" SMARTS uses '[a]' so heteroaromatics (pyridine,
-        furan, imidazole, ...) also trigger the aromatic accent.
-      - Accent volume scales with peak prominence (deeper peak = louder),
-        preserving the dynamic information lost in the constant-volume design.
+    Args:
+
+        extracted_data (tuple(list, list)): data extracted from spectrum
+        compound (NistCompoundObject) : molecule
+        smiles (str): smiles of molecule
 
     Returns:
         tuple[str, dict]: (midi filename, legend dict).
@@ -248,9 +280,9 @@ def molecular_music_fg(extracted_data, compound, smiles: str):
             "Spectrum must have at least 3 points and matching wavenumber/"
             f"transmittance lengths (got {len(wavenumbers)} / {len(transmittances)})."
         )
-    peaks = peak_detection(wavenumbers, transmittances)
+    peaks = noise_reduction(wavenumbers, transmittances)
     compound_name = compound.name
-    instru_main = molecular_weight_to_sound_code(compound)
+    instru_main = 89
     bpm_mol = molecular_weight_to_bpm(compound)
     n_slots = len(peaks)
 
@@ -384,20 +416,20 @@ def molecular_music_fg(extracted_data, compound, smiles: str):
 
 
 # mini test
-if __name__ == "__main__":
-    import nistchempy as nist
-    from get_spectrum import extract_spectrum_data
+    if __name__ == "__main__":
+        import nistchempy as nist
+        from get_spectrum import extract_spectrum_data
 
-    # acetone: CAS 67-64-1, SMILES "CC(=O)C"
-    cas = '58-08-2'
-    smiles = 'CN1C=NC2=C1C(=O)N(C(=O)N2C)C'
-    compound = nist.get_compound(cas)
-    fname, legend = molecular_music_fg(extract_spectrum_data(compound), compound, smiles)
-    print(f"File created: {fname}")
-    print(f"Prelude: {legend['carbon_count']} Synth Drum hits (carbon count)")
-    print(f"BPM: {legend['bpm']}  (MW-derived, Maxwell-Boltzmann)")
-    print("Functional-group legend:")
-    for fg, info in legend['fgs'].items():
-        print(f"  {fg}: instrument={info['instrument_code']}, "
-              f"region={info['region']} cm-1, pitch={info['pitch']}, "
-              f"n_peaks={info['n_peaks']}")
+        # caffeine: CAS 58-08-2, SMILES "CN1C=NC2=C1C(=O)N(C(=O)N2C)C"
+        cas = '58-08-2'
+        smiles = 'CN1C=NC2=C1C(=O)N(C(=O)N2C)C'
+        compound = nist.get_compound(cas)
+        fname, legend = molecular_music_fg(extract_spectrum_data(compound), compound, smiles)
+        print(f"File created: {fname}")
+        print(f"Prelude: {legend['carbon_count']} Synth Drum hits (carbon count)")
+        print(f"BPM: {legend['bpm']}  (MW-derived, Maxwell-Boltzmann)")
+        print("Functional-group legend:")
+        for fg, info in legend['fgs'].items():
+            print(f"  {fg}: instrument={info['instrument_code']}, "
+                f"region={info['region']} cm-1, pitch={info['pitch']}, "
+                f"n_peaks={info['n_peaks']}")

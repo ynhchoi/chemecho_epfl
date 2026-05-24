@@ -38,7 +38,7 @@ pip install git+github.com:yhchoi/chemecho.git
 
 If somehow you miss one or several packages needed for the app after the installation (they should be automatically installed), here is the list of the requirements and how to install them (if needed). 
 ``` 
-pip install matplotlib streamlit jcamp musicpy nistchempy io os pandas requests tempfile base64 
+pip install matplotlib streamlit jcamp musicpy nistchempy io os pandas requests tempfile base6 scipy rdkit 
 ```
 
 An additional module (daw) needs to be installed for the musicpy package. To do so, visit the link: https://musicpy.readthedocs.io/en/latest/Musicpy%20daw%20module/. Read and follow the instruction in the "Preparation before importing" paragraph. 

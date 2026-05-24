@@ -14,6 +14,15 @@ _PUBCHEM = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound"
 
 
 def _detect_input_type(query: str) -> str:
+    """
+    Detects the type of chemical identifier in input
+
+    Args:
+        query (str): user input string (CAS number, SMILES, molecular formula, or name)
+
+    Return:
+        (str): one of 'cas', 'smiles', 'formula', or 'name'
+    """
     if _CAS_RE.match(query):
         return 'cas'
     if any(c in query for c in _SMILES_CHARS):
@@ -24,7 +33,16 @@ def _detect_input_type(query: str) -> str:
 
 
 def _pubchem_props(url: str) -> dict:
-    """GET a PubChem property URL and return the first Properties entry."""
+    """
+    Fetches compound properties from a PubChem REST API URL.
+
+    Args:
+        url (str): full PubChem property URL to query
+
+    Return:
+        (dict): first Properties entry from the PubChem response, or empty dict if
+                the request fails or returns a non-200 status code
+    """
     resp = requests.get(url, timeout=10)
     if resp.status_code != 200:
         return {}
@@ -32,7 +50,17 @@ def _pubchem_props(url: str) -> dict:
 
 
 def _formula_props(formula: str) -> dict:
-    """Async formula search via PubChem ListKey polling (max ~15 s)."""
+    """
+    Fetches compound properties from PubChem using molecular formula
+    Uses asynchronous ListKey polling bc formula searches are not immediate.
+
+    Args:
+        formula (str): molecular formula of the compound (e.g. 'C6H12O6')
+
+    Return:
+        (dict): first Properties entry from the PubChem response, or empty dict if
+                the request fails, returns a non-202 status, or times out after ~15 seconds
+    """
     r = requests.get(
         f"{_PUBCHEM}/formula/{formula}/JSON?MaxRecords=1", timeout=10
     )
@@ -49,16 +77,36 @@ def _formula_props(formula: str) -> dict:
 
 
 def _smiles_from(props: dict) -> str | None:
-    """Extract SMILES from PubChem props regardless of key name variant."""
+    """
+    Extracts a SMILES string from a PubChem properties dictionary.
+    Tries multiple key name variants in order of preference.
+
+    Args:
+        props (dict): PubChem properties dictionary
+
+    Return:
+        (str | None): SMILES string if found, None if no SMILES key is present
+    """
     return (props.get('IsomericSMILES') or props.get('CanonicalSMILES')
             or props.get('SMILES') or props.get('ConnectivitySMILES'))
 
 
 def resolve_molecule(query: str) -> dict:
-    """Resolve name / CAS / formula / SMILES via PubChem.
+    """
+    Resolves a chemical identifier to its SMILES, name, and CAS number via PubChem.
+    Accepts CAS number, SMILES, molecular formula, and name
 
-    Returns dict with keys: smiles, name, cas (cas may be None).
-    Raises ValueError if PubChem cannot find the compound.
+    Args:
+        query (str): chemical identifier (CAS number, SMILES, molecular formula, or name)
+
+    Return:
+        (dict): dictionary with keys:
+                - 'smiles' (str): SMILES string of the compound
+                - 'name' (str): IUPAC name of the compound
+                - 'cas' (str | None): CAS number if found in PubChem synonyms, else None
+
+    Raises:
+        ValueError: if PubChem cannot find the compound
     """
     q = query.strip()
     kind = _detect_input_type(q)
@@ -93,7 +141,21 @@ def resolve_molecule(query: str) -> dict:
 
 
 def nist_compound_from(cas: str | None, name: str):
-    """Fetch NIST compound with IR data, trying CAS first then name search."""
+    """
+    Fetches a NIST compound object with IR data, trying CAS number first
+    then falling back to a name search if the CAS fails or is not provided.
+
+    Args:
+        cas (str | None): CAS number of the compound, or None to skip directly to name search
+        name (str): name of the compound, used as fallback if CAS lookup fails
+
+    Return:
+        (tuple): (cas (str), compound (NistCompound)) where cas is the CAS number
+                 used to retrieve the compound
+
+    Raises:
+        ValueError: if no IR data is found on NIST for the given name
+    """
     if cas:
         try:
             return cas, nist.get_compound(cas)
@@ -110,7 +172,16 @@ def nist_compound_from(cas: str | None, name: str):
 
 
 def draw_molecule(smiles: str):
-    """Return a PIL image of the molecule from its SMILES string."""
+    """
+    Generates a 2D structural image of a molecule from its SMILES
+
+    Args:
+        smiles (str): SMILES of compound
+
+    Return:
+        (PIL.Image | None): 400x300 PIL image of the molecule, or None if the
+                            SMILES string is invalid
+    """
     mol = Chem.MolFromSmiles(smiles)
     if mol is None:
         return None
@@ -118,7 +189,17 @@ def draw_molecule(smiles: str):
 
 
 def molecule_3d_html(smiles: str) -> str | None:
-    """Generate 3D coordinates and return an HTML string for py3Dmol viewer."""
+    """
+    Generates an interactive 3D molecular viewer as an HTML string using py3Dmol.
+    3D coordinates are computed with RDKit using MMFF force field optimization
+
+    Args:
+        smiles (str): SMILES string of the compound
+
+    Return:
+        (str | None): HTML string containing the interactive 3D viewer, or None if
+                      the SMILES is invalid or 3D coordinate generation fails
+    """
     mol = Chem.MolFromSmiles(smiles)
     if mol is None:
         return None

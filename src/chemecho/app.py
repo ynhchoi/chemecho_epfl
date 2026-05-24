@@ -54,7 +54,7 @@ st.markdown(
     "- 🏷️ **Name** — e.g. `caffeine`, `acetone`, `aspirin`\n"
     "- 🔢 **CAS number** — e.g. `67-64-1` (acetone)\n"
     "- 🧪 **Molecular formula** — e.g. `C6H6` (benzene)\n"
-    "- 🧬 **SMILES** — e.g. `CC(=O)C` (acetone)"
+    "- 🧬 **Uppercase SMILES** — e.g. `CC(=O)C` (acetone)"
 )
 
 with st.expander("ℹ️ How to listen — what each sound means"):
@@ -68,7 +68,7 @@ A short drum sequence — one hit per carbon atom — counts the molecule's
 carbon skeleton before the spectrum starts.
 
 **2. Fantasia main melody**
-A fantasia traces the IR spectrum shape. Deeper absorption peaks (lower
+A synthetic sound (Fantasia) traces the IR spectrum shape. Deeper absorption peaks (lower
 transmittance) produce higher pitches. The melody plays from high wavenumber
 to low — the conventional left-to-right direction of an IR plot.
 
@@ -107,7 +107,7 @@ bounded to 60–120 BPM so the music always stays intelligible.
 query = st.text_input(
     "Molecule",
     placeholder="e.g. caffeine  |  67-64-1  |  C6H6  |  CC(=O)C",
-    help="Accepts a compound name, CAS number, molecular formula, or SMILES string.",
+    help="Accepts a compound name, CAS number, molecular formula, or uppercase SMILES string.",
 )
 
 if st.button("Generate") and query:
@@ -206,7 +206,7 @@ if st.button("Generate") and query:
                     style="width:100%;margin-top:4px"
                     aria-label="MIDI player for {compound.name} spectrum sonification">
                 </midi-player>
-            """, height=150)
+            """, height=80)
 
             st.download_button(
                 label="Download MIDI",
@@ -215,7 +215,7 @@ if st.button("Generate") and query:
                 mime="audio/midi"
             )
 
-            # FG legend (v2 only) — presented BOTH as a textual list (for screen
+            # FG legend (v2 only) — presented both as a textual list (for screen
             # readers) AND as a table (for sighted users).
             if legend:
                 st.markdown(
