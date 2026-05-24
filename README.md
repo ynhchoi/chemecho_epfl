@@ -104,7 +104,7 @@ cd ChemEcho
 ```
 
 If you want to fork the project under your own GitHub account, create an
-empty repository on `https://github.com/<your-username>/chemecho_epfl`
+empty repository on `https://github.com/<your-username>/ChemEcho`
 first, then initialize and push (works on macOS, Linux, and Windows; use
 **Anaconda Prompt**, **Git Bash**, or any modern terminal on Windows):
 
@@ -113,7 +113,7 @@ git init
 git add .
 git commit -m "Initial commit"
 git branch -M main
-git remote add origin git@github.com:<your-username>/chemecho_epfl.git
+git remote add origin git@github.com:<your-username>/ChemEcho.git
 git push -u origin main
 ```
 
@@ -139,8 +139,8 @@ above).
 ## 🧯 Troubleshooting
 
 ### `pip install chemecho` fails with "No matching distribution found"
-ChemEcho is not published on PyPI, so plain pip install chemecho will not work.
-Install directly from GitHub using the pip install git+... command
+ChemEcho is not published on PyPI, so plain `pip install chemecho` will not work.
+Install directly from GitHub using the `pip install git+...` command
 in the Installation section above.
 
 ### `ValueError: PubChem could not find '<your input>'`
