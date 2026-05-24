@@ -1,3 +1,22 @@
+"""
+Helpers for the ChemEcho Streamlit app.
+
+Bundles the side logic that supports the UI:
+
+* **Input resolution** — :func:`resolve_molecule` takes any of name / CAS /
+  formula / SMILES and resolves it to ``(smiles, name, cas)`` via PubChem.
+* **NIST lookup** — :func:`nist_compound_from` returns a NIST compound
+  object with IR data, trying a CAS lookup first and falling back to a
+  name search.
+* **Visualization** — :func:`draw_molecule` produces a 2D PIL image,
+  :func:`molecule_3d_html` produces an interactive 3D viewer as an HTML
+  snippet (RDKit ETKDG + MMFF94 → py3Dmol).
+
+All PubChem and NIST functions perform live HTTP requests and are not
+suitable for offline use. See each function's docstring for the exact
+exceptions that can propagate from the network layer.
+"""
+
 import re
 import time
 import requests
@@ -36,12 +55,21 @@ def _pubchem_props(url: str) -> dict:
     """
     Fetches compound properties from a PubChem REST API URL.
 
-    Args:
-        url (str): full PubChem property URL to query
+    Performs a synchronous HTTP GET with a 10-second timeout. HTTP-level
+    failures (non-200 status codes) are swallowed and surface as an empty
+    dict; lower-level network failures propagate.
 
-    Return:
-        (dict): first Properties entry from the PubChem response, or empty dict if
-                the request fails or returns a non-200 status code
+    Args:
+        url (str): full PubChem property URL to query.
+
+    Returns:
+        dict: first Properties entry from the PubChem response, or empty
+        dict if PubChem returned a non-200 status code.
+
+    Raises:
+        requests.exceptions.Timeout: if PubChem does not respond within
+            10 seconds.
+        requests.exceptions.ConnectionError: if the network is unreachable.
     """
     resp = requests.get(url, timeout=10)
     if resp.status_code != 200:
@@ -51,15 +79,27 @@ def _pubchem_props(url: str) -> dict:
 
 def _formula_props(formula: str) -> dict:
     """
-    Fetches compound properties from PubChem using molecular formula
-    Uses asynchronous ListKey polling bc formula searches are not immediate.
+    Fetches compound properties from PubChem using a molecular formula.
+
+    Uses PubChem's asynchronous ListKey polling endpoint because formula
+    searches are not immediate. The initial request must return HTTP 202
+    (Accepted) with a ListKey; otherwise this function returns an empty
+    dict. The poll runs up to 8 times with a 2-second sleep between
+    attempts (~16 seconds upper bound, plus the per-request 10-second
+    timeout).
 
     Args:
-        formula (str): molecular formula of the compound (e.g. 'C6H12O6')
+        formula (str): molecular formula of the compound (e.g. ``'C6H12O6'``).
 
-    Return:
-        (dict): first Properties entry from the PubChem response, or empty dict if
-                the request fails, returns a non-202 status, or times out after ~15 seconds
+    Returns:
+        dict: first Properties entry from the PubChem response, or empty
+        dict if PubChem did not return HTTP 202, or polling never
+        succeeded within the ~16-second budget.
+
+    Raises:
+        requests.exceptions.Timeout: if a single HTTP request exceeds its
+            10-second timeout.
+        requests.exceptions.ConnectionError: if the network is unreachable.
     """
     r = requests.get(
         f"{_PUBCHEM}/formula/{formula}/JSON?MaxRecords=1", timeout=10
