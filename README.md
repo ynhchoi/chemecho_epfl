@@ -59,7 +59,7 @@ installation (they should be installed automatically), here is the manual
 fallback:
 
 ```
-pip install rdkit matplotlib "nistchempy>=2.0.0" pandas streamlit musicpy "jcamp==1.3.0" requests "numpy>=1.25,<2.0" scipy py3Dmol Pillow
+pip install rdkit matplotlib "nistchempy>=2.0.0" pandas streamlit musicpy jcamp requests "numpy>=1.25,<2.0" scipy py3Dmol Pillow
 ```
 
 ### Audio rendering — `musicpy.daw`
