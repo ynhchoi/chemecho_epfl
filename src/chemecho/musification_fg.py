@@ -88,7 +88,8 @@ def noise_reduction(wavenumbers, transmittances) -> list:
         per retained sample, in input order, length ``len(wavenumbers) - 2``.
     """
     peaks = []
-    threshold = max(transmittances) - 0.1 * (max(transmittances) - min(transmittances))    for i in range(1, len(transmittances) - 1):
+    threshold = max(transmittances) - 0.1 * (max(transmittances) - min(transmittances))
+    for i in range(1, len(transmittances) - 1):
         if transmittances[i] < threshold:
             peaks.append((wavenumbers[i], transmittances[i]))
         else:
