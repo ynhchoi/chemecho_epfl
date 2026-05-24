@@ -11,7 +11,7 @@ description = "ChemEcho — translate IR spectra into music to make spectroscopy
 dependencies = [
     "rdkit",
     "matplotlib",
-    "nistchempy==1.0.5",
+    "nistchempy==2.0.0",
     "pandas",
     "streamlit",
     "musicpy",
@@ -20,6 +20,7 @@ dependencies = [
     "numpy>=1.25,<2.0",
     "scipy",
     "py3Dmol",
+    "pytest"
 ]
 authors = [
     {name = "Eulalie Schwendenmann", email = "eulalie.schwendenmann@epfl.ch"},

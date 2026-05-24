@@ -51,7 +51,7 @@ def test_ir_graph():
     fig, ax = ir_graph(extract_spectrum_data(nist.get_compound('58-08-2')), nist.get_compound('58-08-2').name)
 
     assert ax.get_title() == "IR spectrum of Caffeine"
-    assert pytest.approx(ax.get_xlimit(),abs=10) == 4000, 450
+    assert pytest.approx(ax.get_xlim(),abs=10) == (3966, 450)
 
     plt.close(fig)
 
@@ -60,7 +60,9 @@ def test_ir_graph():
 
 def test_draw_molecule():
     #test the size of the image
-    assert draw_molecule().size == 400, 300
+    assert draw_molecule("CCO").size == (400, 300)
+    #test with a wrong sequence, should return "None"
+    assert draw_molecule("abc") == None
     #test with an empty sequence, should return "None"
     assert draw_molecule("") == None
 
@@ -474,6 +476,3 @@ class TestNoiseReduction:
         low_trans_points = [(w, t) for w, t in result if t < max_trans]
         assert len(low_trans_points) > 0
         assert all(abs(w - 1700) < 50 for w, t in low_trans_points)
-
-test_extract_spectrum_data()
-test_ir_graph()

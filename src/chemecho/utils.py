@@ -220,8 +220,10 @@ def draw_molecule(smiles: str):
 
     Return:
         (PIL.Image | None): 400x300 PIL image of the molecule, or None if the
-                            SMILES string is invalid
+                            SMILES string is invalid or absent
     """
+    if not smiles:
+        return None
     mol = Chem.MolFromSmiles(smiles)
     if mol is None:
         return None
