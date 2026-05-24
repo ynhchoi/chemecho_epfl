@@ -127,7 +127,6 @@ if st.button("Generate") and query:
                         if img:
                             st.image(
                                 img,
-                                caption=f"2D skeletal structure of {compound.name}",
                             )
                     with tab_3d:
                         html_3d = molecule_3d_html(smiles)
