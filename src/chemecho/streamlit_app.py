@@ -12,8 +12,7 @@ from musification_fg import molecular_music_fg
 from utils import resolve_molecule, draw_molecule, molecule_3d_html, nist_compound_from
 
 
-# ── Page config (must be first Streamlit call) ────────────────────────────────
-
+# Page configuration
 st.set_page_config(
     page_title="ChemEcho",
     page_icon="🎶",
@@ -23,9 +22,7 @@ st.set_page_config(
     },
 )
 
-
-# ── Sidebar ───────────────────────────────────────────────────────────────────
-
+# Sidebar
 with st.sidebar:
     st.markdown("# About")
     st.markdown(
@@ -42,8 +39,7 @@ with st.sidebar:
     )
 
 
-# ── UI ────────────────────────────────────────────────────────────────────────
-
+# Main page
 st.title("Chem Echo 🎶")
 st.write(
     "See a molecule's structure, IR spectrum, and hear it as music. "
@@ -64,21 +60,21 @@ The music is built from your molecule's infrared (IR) spectrum, in four layers
 that play together:
 
 **1. Carbon prelude** (the very beginning)
-A short drum sequence — one hit per carbon atom — counts the molecule's
+A short drum sequence (one hit per carbon atom) counts the molecule's
 carbon skeleton before the spectrum starts.
 
 **2. Fantasia main melody**
 A synthetic sound (Fantasia) traces the IR spectrum shape. Deeper absorption peaks (lower
 transmittance) produce higher pitches. The melody plays from high wavenumber
-to low — the conventional left-to-right direction of an IR plot.
+to low, meeting the conventional left-to-right direction of an IR plot.
 
 **3. Wavenumber ruler (background drums)**
 A snare drum marks every 100 cm⁻¹, a kick drum every 500 cm⁻¹. These act
-as your "axis ticks" so you can orient where you are in the spectrum.
+as graduations so you can orient where you are in the spectrum.
 
 **4. Functional-group accents**
 When a known IR absorption band is both predicted from the structure
-(SMARTS pattern) **and** confirmed by a real peak in the spectrum, a
+(SMARTS pattern) and confirmed by a real peak in the spectrum, a
 distinctive instrument plays a signature pitch at that moment:
 
 | Functional group | Instrument |
@@ -95,8 +91,6 @@ distinctive instrument plays a signature pitch at that moment:
 | aromatic ring | flute |
 | C–O | French horn |
 | N=O (nitro) | trumpet |
-
-Louder accent = deeper (more prominent) IR peak.
 
 **Tempo encodes molecular weight.** Lighter molecules play faster, heavier
 slower — derived from kinetic theory (Maxwell-Boltzmann mean speed),
@@ -187,11 +181,7 @@ if st.button("Generate") and query:
             st.markdown("**Listen**")
 
 
-            # Web-friendly GM SoundFont (Magenta format). html-midi-player only
-            # supports Magenta-format banks, so this is currently the best
-            # publicly-hosted general-MIDI option. The same MIDI file will
-            # sound different in desktop DAWs (GarageBand, Logic, etc.) because
-            # those use their own, much larger instrument libraries.
+            # HTML-MIDI player
             _SOUNDFONT_URL = (
                 "https://storage.googleapis.com/magentadata/js/soundfonts/sgm_plus"
             )
@@ -215,8 +205,7 @@ if st.button("Generate") and query:
                 mime="audio/midi"
             )
 
-            # FG legend (v2 only) — presented both as a textual list (for screen
-            # readers) AND as a table (for sighted users).
+            # Functional groups table/compound info
             if legend:
                 st.markdown(
                     f"Molecular weight: **{compound.mol_weight:.2f} g/mol**  ·  "
