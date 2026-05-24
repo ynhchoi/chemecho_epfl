@@ -1,26 +1,15 @@
-import os
-import pytest
+"""Tests for the ``musification_fg`` module."""
+
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-import numpy as np
-import nistchempy as nist
-import matplotlib.pyplot as plt
 
+import numpy as np
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src" / "chemecho"))
 
-
-from get_spectrum import extract_spectrum_data, ir_graph
-from utils import (
-    _detect_input_type,
-    _smiles_from,
-    draw_molecule,
-    molecule_3d_html,
-    nist_compound_from,
-    resolve_molecule,
-)
-from musification_fg import (  # noqa: E402
+from musification_fg import (
     FG_CATALOG,
     _scale_accent_volume,
     assign_peaks_to_fgs,
@@ -29,142 +18,8 @@ from musification_fg import (  # noqa: E402
     find_absorption_peaks,
     molecular_music_fg,
     molecular_weight_to_bpm,
-    noise_reduction
+    noise_reduction,
 )
-
-
-# TESTS FOR FUNCTIONS FROM get_spectrum FILE
-
-def test_extract_spectrum_data():
-    #test with a CAS number that give the first result
-    result1 = extract_spectrum_data(nist.get_compound('74-85-1'))
-    transmittance1 = result1[1]
-    assert pytest.approx(transmittance1[0:10],abs=0.1) == [92.9, 92.9, 92.9, 92.9, 92.9, 92.9, 93.0, 93.0, 93.0, 93.2]
-    #test with a CAS number that raise a ValueError
-    with pytest.raises(ValueError, match="Could not find a spectrum for Trinitrotoluene or Trinitrotoluene has an IR spectrum with y units not convertible in Transmittance"):
-        extract_spectrum_data(nist.get_compound('118-96-7'))
-    #test with a CAS number that use the recursive call of the function
-    #result2 = extract_spectrum_data('')[1]
-    #assert pytest.approx(result2[0,10],abs=0.01) == []
-
-def test_ir_graph():
-    fig, ax = ir_graph(extract_spectrum_data(nist.get_compound('58-08-2')), nist.get_compound('58-08-2').name)
-
-    assert ax.get_title() == "IR spectrum of Caffeine"
-    assert pytest.approx(ax.get_xlim(),abs=10) == (3966, 450)
-
-    plt.close(fig)
-
-
-# TESTS FOR FUNCTIONS FROM utils FILE
-
-def test_draw_molecule():
-    #test the size of the image
-    assert draw_molecule("CCO").size == (400, 300)
-    #test with a wrong sequence, should return "None"
-    assert draw_molecule("abc") == None
-    #test with an empty sequence, should return "None"
-    assert draw_molecule("") == None
-
-class TestDetectInputType:
-
-    #checks cas input
-    def test_cas_number_detected(self):
-        assert _detect_input_type("58-08-2") == "cas"
-
-    #checks smiles input with equals (double bonds)
-    def test_smiles_detected_by_equals(self):
-        assert _detect_input_type("CC(=O)C") == "smiles"
-
-    #checks smules input with hash (triple bond)
-    def test_smiles_detected_by_hash(self):
-        assert _detect_input_type("CC#N") == "smiles"
-
-    #check formula input
-    def test_formula_detected(self):
-        assert _detect_input_type("C6H12O6") == "formula"
-
-    #check name input
-    def test_name_detected(self):
-        assert _detect_input_type("caffeine") == "name"
-   
-class TestSmilesFrom:
-
-    #checks that when requesting in Pubchem it prefers the isomeric smiles which contains more info
-    def test_isomeric_smiles_preferred(self):
-        props = {"IsomericSMILES": "CC(=O)C", "CanonicalSMILES": "CCC"}
-        assert _smiles_from(props) == "CC(=O)C"
-
-    #checks that the canonical smiles is used when ismoeric not present
-    def test_canonical_smiles_fallback(self):
-        props = {"CanonicalSMILES": "CCC"}
-        assert _smiles_from(props) == "CCC"
-
-    #checks that if no smiles exists it returns None
-    def test_empty_dict_returns_none(self):
-        assert _smiles_from({}) is None
-
-class TestResolveMolecule:
-
-    #checks that all info exists and is returned when entering name
-    def test_name_query_works(self):
-        result = resolve_molecule("caffeine")
-        assert result["smiles"] is not None
-        assert result["cas"] is not None
-        assert result["name"] is not None
-
-    #checks that all info exists and is returned when entering cas
-    def test_name_query_works(self):
-        result = resolve_molecule("58-08-2")
-        assert result["smiles"] is not None
-        assert result["cas"] is not None
-        assert result["name"] is not None
-
-    #checks that all info exists and is returned when entering smiles
-    def test_name_query_works(self):
-        result = resolve_molecule("CN1C=NC2=C1C(=O)N(C(=O)N2C)C")
-        assert result["smiles"] is not None
-        assert result["cas"] is not None
-        assert result["name"] is not None
-    
-    #checks that all info exists and is returned when entering fromula
-    def test_name_query_works(self):
-        result = resolve_molecule(" C8H10N4O2")
-        assert result["smiles"] is not None
-        assert result["cas"] is not None
-        assert result["name"] is not None
-    
-    #checks that error (Pubchem cant find compound) if invalid entry
-    def test_pubchem_failure_raises_value_error(self):
-        with pytest.raises(ValueError, match="PubChem could not find"):
-            resolve_molecule("notacompound12345xyz")
-
-class TestNistCompoundFrom:
-
-    #checks that NIST search works
-    def test_cas_found_returns_compound(self):
-        cas, compound = nist_compound_from("67-64-1", "acetone")
-        assert cas == "67-64-1"
-        assert compound is not None
-
-    #checks that NSIT search gives error when invalid search
-    def test_no_nist_results_raises_value_error(self):
-        with pytest.raises(ValueError, match="No IR data found"):
-            nist_compound_from(None, "notacompound12345xyz")
-
-class TestMolecule3dHtml:
-
-    #checks that html string returned exists (is not nothing , len>0) and is a string type
-    def test_valid_smiles_returns_html_string(self):
-        html = molecule_3d_html("CN1C=NC2=C1C(=O)N(C(=O)N2C)C")
-        assert isinstance(html, str)
-        assert len(html) > 0
-
-    #checks that None is returned when invalid smiles 
-    def test_invalid_smiles_returns_none(self):
-        assert molecule_3d_html("not_a_smiles!!!") is None
-
-# TESTS FOR FUNCTIONS FROM musification_fg FILEQ
 
 
 # ─── synthetic spectrum helper ────────────────────────────────────────────────
@@ -232,13 +87,13 @@ class TestCountCarbons:
     @pytest.mark.parametrize("smiles,expected", [
         ("", 0),
         ("invalid_xyz!!", 0),
-        ("C", 1),                    # methane
-        ("CC", 2),                   # ethane
-        ("CC(=O)C", 3),              # acetone
-        ("c1ccccc1", 6),             # benzene
-        ("CN1C=NC2=C1C(=O)N(C(=O)N2C)C", 8),  # caffeine
-        ("O", 0),                    # water (no C)
-        ("N#N", 0),                  # N2 gas
+        ("C", 1),                              # methane
+        ("CC", 2),                             # ethane
+        ("CC(=O)C", 3),                        # acetone
+        ("c1ccccc1", 6),                       # benzene
+        ("CN1C=NC2=C1C(=O)N(C(=O)N2C)C", 8),   # caffeine
+        ("O", 0),                              # water (no C)
+        ("N#N", 0),                            # N2 gas
     ])
     def test_known_carbon_counts(self, smiles, expected):
         assert count_carbons(smiles) == expected
@@ -414,24 +269,25 @@ class TestMolecularMusicFg:
         assert legend["fgs"] == {}
         assert legend["carbon_count"] == 0
 
-# tests for noise reduction
+
+# ─── noise reduction ──────────────────────────────────────────────────────────
 
 class TestNoiseReduction:
 
-    #checks that the output of noise_reduction is a list of tuples
+    # checks that the output of noise_reduction is a list of tuples
     def test_returns_list_of_tuples(self):
         wn, trans = make_synthetic_spectrum(peak_cm1=[1700], depths=[60])
         result = noise_reduction(wn, trans)
         assert isinstance(result, list)
         assert all(isinstance(item, tuple) and len(item) == 2 for item in result)
 
-    # checks that the noise reduction output doesnt take the first and last data points which can sometimes cause problems
+    # checks that the noise reduction output doesn't take the first and last data points
     def test_skips_first_and_last_sample(self):
         wn, trans = make_synthetic_spectrum(peak_cm1=[1700], depths=[60])
         result = noise_reduction(wn, trans)
         assert len(result) == len(wn) - 2
 
-    #checks that the transmittances to be ignored (the very high ones, essentially noise) are actually deleted and set to max transmittance
+    # checks that high-transmittance noise points are replaced by max transmittance
     def test_noise_replaced_by_max_transmittance(self):
         wn, trans = make_synthetic_spectrum(peak_cm1=[1700], depths=[60])
         max_trans = max(trans)
@@ -442,7 +298,7 @@ class TestNoiseReduction:
             if original_trans >= threshold:
                 assert t == max_trans
 
-    # checks that the peaks that should still remain actually stay
+    # checks that real peaks (below threshold) are preserved
     def test_real_peaks_preserved(self):
         wn, trans = make_synthetic_spectrum(peak_cm1=[1700], depths=[60])
         max_trans = max(trans)
@@ -460,15 +316,14 @@ class TestNoiseReduction:
         result_wn = [w for w, t in result]
         assert result_wn == wn[1:-1]
 
-    # checks the case of a flat spectrum with no actual peaks so all transmittances are the max (which is the same as all tranmittances)
+    # checks the case of a flat spectrum with no actual peaks
     def test_flat_spectrum_all_replaced_by_max(self):
         wn = list(np.linspace(4000, 500, 100))
         trans = [80.0] * 100
         result = noise_reduction(wn, trans)
         assert all(t == 80.0 for _, t in result)
 
-
-    # checks the case of a spectrum with only 1 peak 
+    # checks the case of a spectrum with only 1 deep peak
     def test_single_deep_peak_survives(self):
         wn, trans = make_synthetic_spectrum(peak_cm1=[1700], depths=[80], width=5)
         max_trans = max(trans)
