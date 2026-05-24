@@ -88,7 +88,8 @@ def noise_reduction(wavenumbers, transmittances) -> list:
         per retained sample, in input order, length ``len(wavenumbers) - 2``.
     """
     peaks = []
-    threshold = max(transmittances) - 0.1 * (max(transmittances) - min(transmittances))    for i in range(1, len(transmittances) - 1):
+    threshold = max(transmittances) - 0.1 * (max(transmittances) - min(transmittances))    
+    for i in range(1, len(transmittances) - 1):
         if transmittances[i] < threshold:
             peaks.append((wavenumbers[i], transmittances[i]))
         else:
@@ -227,7 +228,7 @@ def assign_peaks_to_fgs(detected_peaks: list, present_fgs: list) -> dict:
 def _scale_accent_volume(prominence: float, max_prominence: float,
                          lo: int = 60, hi: int = 127) -> int:
     """
-    Map a peak's prominence to a MIDI velocity so deeper peaks sound louder.
+    Map a peak's prominence to a MIDI volume so deeper peaks sound louder.
 
     Linearly interpolates ``prominence / max_prominence`` onto ``[lo, hi]``.
     Returns ``hi`` if ``max_prominence <= 0`` (degenerate spectrum).
@@ -237,8 +238,8 @@ def _scale_accent_volume(prominence: float, max_prominence: float,
             :func:`scipy.signal.find_peaks`.
         max_prominence (float): largest prominence in the same spectrum, used
             as the upper anchor for the mapping.
-        lo (int): minimum MIDI velocity (0–127). Default 60.
-        hi (int): maximum MIDI velocity (0–127). Default 127.
+        lo (int): minimum MIDI volume (0–127). Default 60.
+        hi (int): maximum MIDI volume (0–127). Default 127.
 
     Returns:
         int: MIDI velocity in the range ``[lo, hi]``.    """
